@@ -25,6 +25,9 @@ tmp/
 # .env file
 .env
 
+# local sqlite db
+db/
+
 # Project build
 main
 *templ.go

@@ -1,54 +1,64 @@
 package server
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
+
+	"mediaserver/cmd/web"
+	"mediaserver/internal/auth"
+	"mediaserver/internal/middleware"
 
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
-	"mediaserver/cmd/web"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
 
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-		AllowCredentials: true,
-		MaxAge:           300,
-	}))
+	// Global Middleware
+	r.Use(chiMiddleware.Logger)
+	r.Use(chiMiddleware.Recoverer)
+	r.Use(middleware.CORS())
 
-	r.Get("/", s.HelloWorldHandler)
+	// 1. UI & Frontend Routes
+	s.RegisterUIRoutes(r)
 
-	r.Get("/health", s.healthHandler)
-
-	fileServer := http.FileServer(http.FS(web.Files))
-	r.Handle("/assets/*", fileServer)
-	r.Get("/web", templ.Handler(web.HelloForm()).ServeHTTP)
-	r.Post("/hello", web.HelloWebHandler)
+	// 2. Backend API Routes
+	r.Route("/api", func(apiRouter chi.Router) {
+		s.RegisterAPIRoutes(apiRouter)
+	})
 
 	return r
 }
 
-func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
-	resp := make(map[string]string)
-	resp["message"] = "Hello World"
+func (s *Server) RegisterUIRoutes(r chi.Router) {
+	// Static assets
+	fileServer := http.FileServer(http.FS(web.Files))
+	r.Handle("/assets/*", fileServer)
 
-	jsonResp, err := json.Marshal(resp)
-	if err != nil {
-		log.Fatalf("error handling JSON marshal. Err: %v", err)
-	}
+	// Guest-only UI pages (Redirects authenticated users away)
+	r.Group(func(gr chi.Router) {
+		gr.Use(middleware.GuestMiddleware(s.db))
+		gr.Get("/sign-up", templ.Handler(web.SignUp()).ServeHTTP)
+		gr.Get("/sign-in", templ.Handler(web.SignIn()).ServeHTTP)
+	})
 
-	_, _ = w.Write(jsonResp)
+	// Public UI pages
+	r.Get("/web", templ.Handler(web.HelloForm()).ServeHTTP)
+
+	// Protected UI pages (Redirects unauthenticated users to /sign-in)
+	r.Group(func(gr chi.Router) {
+		gr.Use(middleware.UIAuthMiddleware(s.db))
+		gr.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(`<h1>Welcome to MediaServer Dashboard</h1><a href="/api/auth/logout">Logout</a>`))
+		})
+	})
 }
 
-func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
-	jsonResp, _ := json.Marshal(s.db.Health())
-	_, _ = w.Write(jsonResp)
+func (s *Server) RegisterAPIRoutes(r chi.Router) {
+	r.Get("/", s.HelloWorldHandler)
+	r.Get("/health", s.healthHandler)
+	r.Mount("/auth", auth.NewRouter(s.db))
+	r.Post("/hello", web.HelloWebHandler)
 }

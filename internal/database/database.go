@@ -9,19 +9,23 @@ import (
 	"strconv"
 	"time"
 
+	"mediaserver/internal/models"
+
+	"github.com/google/uuid"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // Service represents a service that interacts with a database.
 type Service interface {
-	// Health returns a map of health status information.
-	// The keys and values in the map are service-specific.
 	Health() map[string]string
-
-	// Close terminates the database connection.
-	// It returns an error if the connection cannot be closed.
 	Close() error
+	CreateUser(email, passwordHash string) (uuid.UUID, error)
+	GetUserByEmail(email string) (*models.User, error)
+	StoreRefreshToken(userID uuid.UUID, token string, expiresAt time.Time) (uuid.UUID, error)
+	GetRefreshToken(token string) (*models.RefreshToken, error)
+	RevokeRefreshToken(token string) error
+	RevokeAllUserRefreshTokens(userID uuid.UUID) error
 }
 
 type service struct {
@@ -45,11 +49,36 @@ func New() Service {
 		// another initialization error.
 		log.Fatal(err)
 	}
+	if err := migrate(db); err != nil {
+		log.Fatal(err)
+	}
 
 	dbInstance = &service{
 		db: db,
 	}
 	return dbInstance
+}
+
+func migrate(db *sql.DB) error {
+	query := `
+	CREATE TABLE IF NOT EXISTS users (
+		id TEXT PRIMARY KEY,
+		email TEXT UNIQUE NOT NULL,
+		password_hash TEXT NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS refresh_tokens (
+		id TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL,
+		token TEXT UNIQUE NOT NULL,
+		expires_at TIMESTAMP NOT NULL,
+		revoked BOOLEAN NOT NULL DEFAULT 0,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	);`
+	_, err := db.Exec(query)
+	return err
 }
 
 // Health checks the health of the database connection by pinging the database.
@@ -65,7 +94,6 @@ func (s *service) Health() map[string]string {
 	if err != nil {
 		stats["status"] = "down"
 		stats["error"] = fmt.Sprintf("db down: %v", err)
-		log.Fatalf("db down: %v", err) // Log the error and terminate the program
 		return stats
 	}
 

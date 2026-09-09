@@ -2,16 +2,55 @@ package web
 
 templ Base() {
 	<!DOCTYPE html>
-	<html lang="en" >
+	<html lang="en">
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width,initial-scale=1"/>
-			<title>Go Blueprint Hello</title>
-			<link href="assets/css/output.css" rel="stylesheet"/>
+			<title>Media Server</title>
+			<script>
+				const origWarn = console.warn;
+				console.warn = function(...args) {
+					if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+					origWarn.apply(console, args);
+				};
+			</script>
+			<script src="https://cdn.tailwindcss.com"></script>
 			<script src="assets/js/htmx.min.js"></script>
+			<script>
+				document.addEventListener('htmx:responseError', async function(evt) {
+					if (evt.detail.xhr.status === 401) {
+						if (evt.detail.pathInfo && evt.detail.pathInfo.requestPath.includes('/api/auth/refresh')) {
+							window.location.href = '/sign-in';
+							return;
+						}
+
+						try {
+							const res = await fetch('/api/auth/refresh', {
+								method: 'POST',
+								credentials: 'include'
+							});
+							if (res.ok) {
+								htmx.ajax(evt.detail.requestConfig.verb, evt.detail.pathInfo.requestPath, {
+									target: evt.detail.target,
+									values: evt.detail.parameters
+								});
+							} else {
+								window.location.href = '/sign-in';
+							}
+						} catch (e) {
+							window.location.href = '/sign-in';
+						}
+					}
+				});
+			</script>
+			<style>
+				.htmx-indicator { display: none; }
+				.htmx-request .htmx-indicator { display: inline-block; }
+				.htmx-request.htmx-indicator { display: inline-block; }
+			</style>
 		</head>
-		<body >
-			<main >
+		<body>
+			<main>
 				{ children... }
 			</main>
 		</body>

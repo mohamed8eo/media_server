@@ -395,10 +395,10 @@ func (h *FileHandler) RecentHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type StatsResponse struct {
-	TotalSize   int64         `json:"total_size"`
-	FileCount   int           `json:"file_count"`
-	Categories  map[string]int `json:"categories"`
-	TotalSizeFormatted string `json:"total_size_formatted"`
+	TotalSize          int64          `json:"total_size"`
+	FileCount          int            `json:"file_count"`
+	Categories         map[string]int `json:"categories"`
+	TotalSizeFormatted string         `json:"total_size_formatted"`
 }
 
 func (h *FileHandler) StatsHandler(w http.ResponseWriter, r *http.Request) {

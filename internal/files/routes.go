@@ -160,23 +160,22 @@ func (h *FileHandler) GetFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 
-	if strings.HasPrefix(file.MimeType, "video/") {
-		w.Header().Set("Content-Type", file.MimeType)
-		http.ServeContent(
-			w,
-			r,
-			file.Filename,
-			file.CreatedAt,
-			f,
-		)
-		return
+	inlineTypes := []string{"video/", "image/", "application/pdf"}
+	serveInline := false
+	for _, prefix := range inlineTypes {
+		if strings.HasPrefix(file.MimeType, prefix) {
+			serveInline = true
+			break
+		}
 	}
 
 	w.Header().Set("Content-Type", file.MimeType)
-	w.Header().Set(
-		"Content-Disposition",
-		fmt.Sprintf(`attachment; filename="%s"`, file.Filename),
-	)
+	if !serveInline {
+		w.Header().Set(
+			"Content-Disposition",
+			fmt.Sprintf(`attachment; filename="%s"`, file.Filename),
+		)
+	}
 	http.ServeContent(
 		w,
 		r,

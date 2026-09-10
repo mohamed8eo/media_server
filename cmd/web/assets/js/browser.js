@@ -178,11 +178,29 @@ function renderFiles() {
     if (emptyEl) emptyEl.classList.add('hidden');
 
     if (gridEl) {
-        gridEl.innerHTML = files.map(f => '<div class="group rounded-xl border bg-card text-card-foreground shadow-sm p-4 hover:shadow-md transition-all flex flex-col justify-between space-y-3"><div class="flex items-start justify-between"><div class="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">' + getMimeIconSvg(f.mime_type) + '</div><span class="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md uppercase tracking-wider">' + formatMimeBadge(f.mime_type) + '</span></div><div class="space-y-1 overflow-hidden"><h4 class="text-sm font-medium leading-none truncate" title="' + escapeHtml(f.filename) + '">' + escapeHtml(f.filename) + '</h4><div class="flex items-center justify-between text-xs text-muted-foreground"><span>' + formatSize(f.size) + '</span><span>' + formatDate(f.created_at) + '</span></div></div></div>').join('');
+        gridEl.innerHTML = files.map(f => '<div data-file-id="' + f.id + '" class="group cursor-pointer rounded-xl border bg-card text-card-foreground shadow-sm p-4 hover:shadow-md transition-all flex flex-col justify-between space-y-3"><div class="flex items-start justify-between"><div class="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">' + getMimeIconSvg(f.mime_type) + '</div><span class="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md uppercase tracking-wider">' + formatMimeBadge(f.mime_type) + '</span></div><div class="space-y-1 overflow-hidden"><h4 class="text-sm font-medium leading-none truncate" title="' + escapeHtml(f.filename) + '">' + escapeHtml(f.filename) + '</h4><div class="flex items-center justify-between text-xs text-muted-foreground"><span>' + formatSize(f.size) + '</span><span>' + formatDate(f.created_at) + '</span></div></div></div>').join('');
+        if (!gridEl._delegationBound) {
+            gridEl.addEventListener('click', function(e) {
+                var card = e.target.closest('[data-file-id]');
+                if (!card) return;
+                var file = allFiles.find(function(f) { return f.id === card.dataset.fileId; });
+                if (file) openFile(file);
+            });
+            gridEl._delegationBound = true;
+        }
     }
 
     if (listEl) {
-        listEl.innerHTML = files.map(f => '<div class="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"><div class="flex items-center gap-3 min-w-0 flex-1 mr-4"><div class="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground shrink-0">' + getMimeIconSvg(f.mime_type) + '</div><div class="min-w-0 flex-1"><h4 class="text-sm font-medium truncate" title="' + escapeHtml(f.filename) + '">' + escapeHtml(f.filename) + '</h4><p class="text-xs text-muted-foreground">' + formatMimeBadge(f.mime_type) + '</p></div></div><div class="flex items-center gap-6 text-xs text-muted-foreground shrink-0"><span>' + formatSize(f.size) + '</span><span class="w-24 text-right">' + formatDate(f.created_at) + '</span></div></div>').join('');
+        listEl.innerHTML = files.map(f => '<div data-file-id="' + f.id + '" class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"><div class="flex items-center gap-3 min-w-0 flex-1 mr-4"><div class="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground shrink-0">' + getMimeIconSvg(f.mime_type) + '</div><div class="min-w-0 flex-1"><h4 class="text-sm font-medium truncate" title="' + escapeHtml(f.filename) + '">' + escapeHtml(f.filename) + '</h4><p class="text-xs text-muted-foreground">' + formatMimeBadge(f.mime_type) + '</p></div></div><div class="flex items-center gap-6 text-xs text-muted-foreground shrink-0"><span>' + formatSize(f.size) + '</span><span class="w-24 text-right">' + formatDate(f.created_at) + '</span></div></div>').join('');
+        if (!listEl._delegationBound) {
+            listEl.addEventListener('click', function(e) {
+                var card = e.target.closest('[data-file-id]');
+                if (!card) return;
+                var file = allFiles.find(function(f) { return f.id === card.dataset.fileId; });
+                if (file) openFile(file);
+            });
+            listEl._delegationBound = true;
+        }
     }
 }
 
@@ -251,6 +269,57 @@ function getMimeIconSvg(mime) {
         return '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>';
     }
     return '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>';
+}
+
+function openFile(file) {
+    if (file.mime_type && file.mime_type.startsWith('video/')) {
+        showFileViewerModal(file, 'video');
+    } else {
+        window.location.href = '/api/file/' + file.id;
+    }
+}
+
+function showFileViewerModal(file, type) {
+    const root = document.getElementById('file-viewer-root');
+    if (!root) return;
+
+    root.innerHTML = `
+      <div data-state="open" class="fixed inset-0 z-50 bg-black/80 animate-overlay-show" data-viewer-overlay></div>
+      <div data-state="open" class="fixed left-[50%] top-[50%] z-50 grid w-full max-w-3xl translate-x-[-50%] translate-y-[-50%] gap-4 border bg-popover p-6 shadow-lg duration-200 animate-content-show sm:rounded-lg" data-viewer-content>
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold leading-none tracking-tight text-popover-foreground truncate pr-4">${escapeHtml(file.filename)}</h2>
+          <button data-viewer-close class="inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground shrink-0">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        <div class="flex items-center justify-center overflow-auto max-h-[70vh]">
+          <video controls preload="metadata" src="/api/file/${file.id}" class="w-full rounded-lg"></video>
+        </div>
+      </div>
+    `;
+
+    var overlay = root.querySelector('[data-viewer-overlay]');
+    var content = root.querySelector('[data-viewer-content]');
+    var closeBtn = root.querySelector('[data-viewer-close]');
+    var video = root.querySelector('video');
+
+    function cleanup() {
+        if (overlay) overlay.setAttribute('data-state', 'closed');
+        if (content) content.setAttribute('data-state', 'closed');
+        if (video) { video.pause(); video.removeAttribute('src'); video.load(); }
+        setTimeout(function() { root.innerHTML = ''; }, 150);
+        cleanupListeners();
+    }
+    function onKeydown(e) { if (e.key === 'Escape') { e.preventDefault(); cleanup(); } }
+    function cleanupListeners() {
+        document.removeEventListener('keydown', onKeydown);
+        if (closeBtn) closeBtn.removeEventListener('click', cleanup);
+        if (overlay) overlay.removeEventListener('click', cleanup);
+    }
+
+    document.addEventListener('keydown', onKeydown);
+    if (closeBtn) closeBtn.addEventListener('click', cleanup);
+    if (overlay) overlay.addEventListener('click', cleanup);
 }
 
 function escapeHtml(str) {

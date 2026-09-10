@@ -8,14 +8,14 @@ templ AppShell(currentPage string) {
 			@Sidebar(currentPage)
 			<div class="flex flex-1 flex-col pl-64">
 				<!-- Top bar -->
-				<header class="sticky top-0 z-40 flex h-14 items-center gap-4 border-b px-6 border-border dark:border-slate-800/80 bg-card/80 dark:bg-[#0d1322]/80 backdrop-blur-md">
+				<header class="sticky top-0 z-40 flex h-14 items-center gap-3 px-6 border-b border-border dark:border-slate-800/80 bg-card/80 dark:bg-[#0d1322]/80 backdrop-blur-md">
 					<div class="flex-1"></div>
-					<button onclick="toggleTheme()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input dark:border-slate-700 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 h-9 w-9">
-						@icons.Moon(templ.Attributes{"class": "h-4 w-4 block dark:hidden"})
-						@icons.Sun(templ.Attributes{"class": "h-4 w-4 hidden dark:block"})
+					<button onclick="toggleTheme()" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input dark:border-slate-700 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 h-9 w-9 cursor-pointer" title="Toggle theme">
+						@icons.Moon(templ.Attributes{"class": "h-4 w-4 block dark:hidden", "stroke": "currentColor", "stroke-width": "2", "fill": "none"})
+						@icons.Sun(templ.Attributes{"class": "h-4 w-4 hidden dark:block", "stroke": "currentColor", "stroke-width": "2", "fill": "none"})
 					</button>
-					<a href="/api/auth/logout" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input dark:border-slate-700 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 h-9 w-9">
-						@icons.LogOut(templ.Attributes{"class": "h-4 w-4"})
+					<a href="/api/auth/logout" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input dark:border-slate-700 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 h-9 w-9 cursor-pointer" title="Sign out">
+						@icons.LogOut(templ.Attributes{"class": "h-4 w-4", "stroke": "currentColor", "stroke-width": "2", "fill": "none"})
 					</a>
 				</header>
 				<main class="flex-1 gap-4 p-6 md:gap-8">

@@ -84,6 +84,13 @@ func (h *FileHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	if folder != "" {
 		targetDir = filepath.Join(userDir, folder)
 	}
+	absTarget, err1 := filepath.Abs(targetDir)
+	absUser, err2 := filepath.Abs(userDir)
+	if err1 != nil || err2 != nil || !strings.HasPrefix(absTarget, absUser) {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid folder path")
+		return
+	}
+
 	if err = os.MkdirAll(targetDir, 0o755); err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to prepare storage")
 		return
@@ -214,6 +221,13 @@ func (h *FileHandler) MkdirHandler(w http.ResponseWriter, r *http.Request) {
 	targetDir := userDir
 	if cleaned != "" {
 		targetDir = filepath.Join(userDir, cleaned)
+	}
+
+	absTarget, err1 := filepath.Abs(targetDir)
+	absUser, err2 := filepath.Abs(userDir)
+	if err1 != nil || err2 != nil || !strings.HasPrefix(absTarget, absUser) {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid folder path")
+		return
 	}
 
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {

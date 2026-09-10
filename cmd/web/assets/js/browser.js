@@ -2,7 +2,7 @@ let allFiles = [];
 let allFolders = ['/'];
 let currentView = localStorage.getItem('file_view') || 'grid';
 let currentFilter = new URLSearchParams(window.location.search).get('type') || 'all';
-let currentFolder = '/';
+let currentFolder = new URLSearchParams(window.location.search).get('folder') || '/';
 
 function initFileBrowser() {
     setFileView(currentView, false);
@@ -14,6 +14,85 @@ function initFileBrowser() {
     if (searchInput) searchInput.addEventListener('input', () => renderFiles());
     const sortSelect = document.getElementById('file-sort');
     if (sortSelect) sortSelect.addEventListener('change', () => renderFiles());
+}
+
+async function createNewFolder() {
+    const name = await showFolderPrompt();
+    if (!name) return;
+    const prefix = currentFolder === '/' ? '' : currentFolder.replace(/\/$/, '');
+    const fullPath = prefix ? prefix + '/' + name : name;
+    try {
+        const res = await fetch('/api/file/mkdir', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: fullPath })
+        });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        if (!allFolders.includes(data.path)) allFolders.push(data.path);
+        renderAll();
+    } catch (e) {
+        showToast('Failed to create folder');
+    }
+}
+
+function getFoldersInFolder(folderPath) {
+    const prefix = folderPath === '/' ? '/' : folderPath.replace(/\/$/, '') + '/';
+    return allFolders.filter(f => {
+        if (f === folderPath) return false;
+        if (folderPath === '/') {
+            const parts = f.replace(/^\//, '').split('/');
+            return parts.length === 1 && f !== '/';
+        }
+        if (!f.startsWith(prefix)) return false;
+        const rest = f.slice(prefix.length);
+        return rest.length > 0 && !rest.includes('/');
+    }).sort();
+}
+
+function renderFolderCard(folder) {
+    const name = folder.split('/').pop();
+    return `<div data-folder-path="${escapeHtml(folder)}" class="group relative cursor-pointer rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-lg hover:border-primary/50 transition-all duration-200 overflow-hidden folder-card">
+        <div class="aspect-video relative overflow-hidden bg-muted flex items-center justify-center">
+            <svg class="h-12 w-12 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M2.75 12.75V12A2.25 2.25 0 0 1 5 9.75h14A2.25 2.25 0 0 1 21.25 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/></svg>
+        </div>
+        <div class="p-3 space-y-1">
+            <h4 class="text-sm font-medium leading-none truncate" title="${escapeHtml(folder)}">${escapeHtml(name)}</h4>
+        </div>
+    </div>`;
+}
+
+function renderFolderRow(folder) {
+    const name = folder.split('/').pop();
+    return `<div data-folder-path="${escapeHtml(folder)}" class="group flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border last:border-0 folder-card">
+        <div class="w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0 flex items-center justify-center">
+            <svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M2.75 12.75V12A2.25 2.25 0 0 1 5 9.75h14A2.25 2.25 0 0 1 21.25 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/></svg>
+        </div>
+        <div class="min-w-0 flex-1">
+            <h4 class="text-sm font-medium truncate" title="${escapeHtml(folder)}">${escapeHtml(name)}</h4>
+        </div>
+    </div>`;
+}
+
+function renderBreadcrumbs() {
+    const el = document.getElementById('breadcrumbs');
+    if (!el) return;
+    const parts = currentFolder === '/' ? [] : currentFolder.replace(/^\//, '').split('/');
+    let html = `<button onclick="navigateToFolder('/')" class="hover:text-foreground transition-colors font-medium">Home</button>`;
+    let path = '';
+    parts.forEach((part, i) => {
+        path += '/' + part;
+        const isLast = i === parts.length - 1;
+        html += `<span class="text-muted-foreground">/</span>`;
+        if (isLast) {
+            html += `<span class="font-medium text-foreground">${escapeHtml(part)}</span>`;
+        } else {
+            const p = path;
+            html += `<button onclick="navigateToFolder('${escapeHtml(p)}')" class="hover:text-foreground transition-colors">${escapeHtml(part)}</button>`;
+        }
+    });
+    el.innerHTML = html;
 }
 
 function getCurrentFolder() {
@@ -39,6 +118,7 @@ window.addEventListener('popstate', () => {
 });
 
 function renderAll() {
+    renderBreadcrumbs();
     renderFiles();
     updateActiveFilterTab();
 }
@@ -108,12 +188,14 @@ function renderFiles() {
     const sortBy = sortSelect ? sortSelect.value : 'date-desc';
 
     let files = getFilesInFolder(currentFolder);
+    let folders = getFoldersInFolder(currentFolder);
 
     if (query) {
         files = allFiles.filter(f => f.filename.toLowerCase().includes(query));
         if (currentFilter && currentFilter !== 'all') {
             files = files.filter(f => getCategoryFromMime(f.mime_type) === currentFilter);
         }
+        folders = allFolders.filter(f => f !== '/' && f.toLowerCase().includes(query));
     }
 
     files.sort((a, b) => {
@@ -126,9 +208,10 @@ function renderFiles() {
         return 0;
     });
 
-    if (fileCountEl) fileCountEl.textContent = files.length + ' item' + (files.length !== 1 ? 's' : '');
+    const totalCount = folders.length + files.length;
+    if (fileCountEl) fileCountEl.textContent = totalCount + ' item' + (totalCount !== 1 ? 's' : '');
 
-    if (files.length === 0) {
+    if (totalCount === 0) {
         if (emptyEl) emptyEl.classList.remove('hidden');
         if (gridEl) gridEl.innerHTML = '';
         if (listEl) listEl.innerHTML = '';
@@ -137,10 +220,18 @@ function renderFiles() {
 
     if (emptyEl) emptyEl.classList.add('hidden');
 
+    const foldersHtml = folders.map(f => renderFolderCard(f)).join('');
+    const filesHtml = files.map(f => renderGridCard(f)).join('');
+
     if (gridEl) {
-        gridEl.innerHTML = files.map(f => renderGridCard(f)).join('');
+        gridEl.innerHTML = foldersHtml + filesHtml;
         if (!gridEl._delegationBound) {
             gridEl.addEventListener('click', function(e) {
+                var folderCard = e.target.closest('[data-folder-path]');
+                if (folderCard) {
+                    navigateToFolder(folderCard.dataset.folderPath);
+                    return;
+                }
                 var card = e.target.closest('[data-file-id]');
                 if (!card) return;
                 var action = e.target.closest('[data-action]');
@@ -155,10 +246,18 @@ function renderFiles() {
         }
     }
 
+    const foldersListHtml = folders.map(f => renderFolderRow(f)).join('');
+    const filesListHtml = files.map(f => renderListRow(f)).join('');
+
     if (listEl) {
-        listEl.innerHTML = files.map(f => renderListRow(f)).join('');
+        listEl.innerHTML = foldersListHtml + filesListHtml;
         if (!listEl._delegationBound) {
             listEl.addEventListener('click', function(e) {
+                var folderRow = e.target.closest('[data-folder-path]');
+                if (folderRow) {
+                    navigateToFolder(folderRow.dataset.folderPath);
+                    return;
+                }
                 var row = e.target.closest('[data-file-id]');
                 if (!row) return;
                 var action = e.target.closest('[data-action]');

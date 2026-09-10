@@ -35,16 +35,19 @@ async function loadFolderOptions(selectEl) {
     try {
         const res = await fetch('/api/file/', { method: 'GET', credentials: 'include' });
         if (!res.ok) return;
-        const files = await res.json();
-        const folders = new Set(['/']);
-        files.forEach(f => { if (f.folder) folders.add(f.folder); });
+        const data = await res.json();
+        const folders = data.folders || ['/'];
+        if (!folders.includes('/')) folders.unshift('/');
 
         const urlFolder = new URLSearchParams(window.location.search).get('folder');
 
         let html = '';
-        Array.from(folders).sort().forEach(folder => {
+        folders.forEach(folder => {
             const selected = folder === urlFolder ? ' selected' : '';
-            html += '<option value="' + escapeHtml(folder) + '"' + selected + '>' + escapeHtml(folder) + '</option>';
+            const depth = folder === '/' ? 0 : folder.split('/').length - 1;
+            const prefix = depth > 0 ? '&nbsp;&nbsp;'.repeat(depth) + '↳ ' : '';
+            const displayLabel = folder === '/' ? '/' : prefix + folder.split('/').pop();
+            html += '<option value="' + escapeHtml(folder) + '"' + selected + '>' + displayLabel + '</option>';
         });
         selectEl.innerHTML = html;
     } catch (e) {}

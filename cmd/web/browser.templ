@@ -7,58 +7,66 @@ templ Browser(currentPage string) {
 		<!-- Hero: Recent Section -->
 		@RecentSection()
 		<!-- Toolbar -->
-		<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-			<div class="flex items-center gap-2">
-				<h2 class="text-lg font-semibold tracking-tight" id="section-title">All Media</h2>
-				<span id="file-count" class="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md tabular-nums"></span>
-			</div>
-			<div class="flex items-center gap-3">
-				<!-- Filter tabs -->
-				<div class="flex items-center border rounded-lg p-0.5 bg-muted/50" id="filter-tabs">
-					<button onclick="setFilter('all')" data-filter="all" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
-						@icons.Layers(templ.Attributes{"class": "h-3.5 w-3.5"})
-						All
-					</button>
-					<button onclick="setFilter('video')" data-filter="video" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
-						@icons.Video(templ.Attributes{"class": "h-3.5 w-3.5"})
-						Videos
-					</button>
-					<button onclick="setFilter('image')" data-filter="image" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
-						@icons.Image(templ.Attributes{"class": "h-3.5 w-3.5"})
-						Images
-					</button>
-					<button onclick="setFilter('document')" data-filter="document" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
-						@icons.FileText(templ.Attributes{"class": "h-3.5 w-3.5"})
-						Docs
-					</button>
+		<div class="space-y-4">
+			<div id="breadcrumbs" class="flex items-center gap-1.5 text-sm text-muted-foreground"></div>
+			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+				<div class="flex items-center gap-2">
+					<h2 class="text-lg font-semibold tracking-tight" id="section-title">All Media</h2>
+					<span id="file-count" class="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md tabular-nums"></span>
 				</div>
-				<!-- Search -->
-				<div class="relative">
-					@icons.Search(templ.Attributes{"class": "absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"})
-					<input
-						type="text"
-						id="file-search"
-						placeholder="Search..."
-						class="flex h-9 w-48 rounded-lg border border-input bg-transparent pl-9 pr-4 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-					/>
-				</div>
-				<!-- Sort -->
-				<select id="file-sort" class="flex h-9 items-center justify-between whitespace-nowrap rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-					<option value="date-desc">Newest</option>
-					<option value="date-asc">Oldest</option>
-					<option value="name-asc">Name A-Z</option>
-					<option value="name-desc">Name Z-A</option>
-					<option value="size-desc">Largest</option>
-					<option value="size-asc">Smallest</option>
-				</select>
-				<!-- View toggle -->
-				<div class="flex items-center border rounded-lg p-0.5 bg-muted/50">
-					<button id="view-grid" onclick="setFileView('grid')" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors h-8 w-8" title="Grid view">
-						@icons.LayoutGrid(templ.Attributes{"class": "h-4 w-4"})
+				<div class="flex items-center gap-3">
+					<!-- Filter tabs -->
+					<div class="flex items-center border rounded-lg p-0.5 bg-muted/50" id="filter-tabs">
+						<button onclick="setFilter('all')" data-filter="all" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
+							@icons.Layers(templ.Attributes{"class": "h-3.5 w-3.5"})
+							All
+						</button>
+						<button onclick="setFilter('video')" data-filter="video" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
+							@icons.Video(templ.Attributes{"class": "h-3.5 w-3.5"})
+							Videos
+						</button>
+						<button onclick="setFilter('image')" data-filter="image" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
+							@icons.Image(templ.Attributes{"class": "h-3.5 w-3.5"})
+							Images
+						</button>
+						<button onclick="setFilter('document')" data-filter="document" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
+							@icons.FileText(templ.Attributes{"class": "h-3.5 w-3.5"})
+							Docs
+						</button>
+					</div>
+					<!-- Search -->
+					<div class="relative">
+						@icons.Search(templ.Attributes{"class": "absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"})
+						<input
+							type="text"
+							id="file-search"
+							placeholder="Search..."
+							class="flex h-9 w-48 rounded-lg border border-input bg-transparent pl-9 pr-4 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+						/>
+					</div>
+					<!-- Sort -->
+					<select id="file-sort" class="flex h-9 items-center justify-between whitespace-nowrap rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+						<option value="date-desc">Newest</option>
+						<option value="date-asc">Oldest</option>
+						<option value="name-asc">Name A-Z</option>
+						<option value="name-desc">Name Z-A</option>
+						<option value="size-desc">Largest</option>
+						<option value="size-asc">Smallest</option>
+					</select>
+					<!-- New folder button -->
+					<button onclick="createNewFolder()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3 py-2" title="New Folder">
+						@icons.FolderPlus(templ.Attributes{"class": "h-4 w-4"})
+						<span class="hidden md:inline">New Folder</span>
 					</button>
-					<button id="view-list" onclick="setFileView('list')" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors h-8 w-8" title="List view">
-						@icons.List(templ.Attributes{"class": "h-4 w-4"})
-					</button>
+					<!-- View toggle -->
+					<div class="flex items-center border rounded-lg p-0.5 bg-muted/50">
+						<button id="view-grid" onclick="setFileView('grid')" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors h-8 w-8" title="Grid view">
+							@icons.LayoutGrid(templ.Attributes{"class": "h-4 w-4"})
+						</button>
+						<button id="view-list" onclick="setFileView('list')" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors h-8 w-8" title="List view">
+							@icons.List(templ.Attributes{"class": "h-4 w-4"})
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>

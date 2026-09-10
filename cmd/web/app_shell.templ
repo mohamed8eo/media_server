@@ -1,0 +1,54 @@
+package web
+
+templ AppShell(currentPage string) {
+	@Base() {
+		<div class="flex min-h-screen w-full flex-col bg-background">
+			<header class="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-muted/40 px-4 backdrop-blur supports-[backdrop-filter]:bg-muted/60 md:px-6">
+				<nav class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm">
+					<a href="/" class="flex items-center gap-2 text-lg font-semibold md:text-base">
+						<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+							</svg>
+						</div>
+						<span class="hidden lg:block">MediaServer</span>
+					</a>
+					<a href="/" class={ "transition-colors hover:text-foreground", templ.KV("text-foreground", currentPage == "home"), templ.KV("text-muted-foreground", currentPage != "home") }>
+						Files
+					</a>
+					<a href="/upload" class={ "transition-colors hover:text-foreground", templ.KV("text-foreground", currentPage == "upload"), templ.KV("text-muted-foreground", currentPage != "upload") }>
+						Upload
+					</a>
+				</nav>
+				<div class="flex w-full items-center gap-4 md:ml-auto md:max-w-sm">
+					<div class="flex-1"></div>
+					<button onclick="toggleTheme()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 w-9">
+						<svg class="h-4 w-4 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+						<svg class="h-4 w-4 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+					</button>
+					<a href="/upload" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
+						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+						Upload
+					</a>
+					<a href="/api/auth/logout" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 w-9">
+						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+					</a>
+				</div>
+			</header>
+			<main class="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+				{ children... }
+			</main>
+		</div>
+		<script>
+			function toggleTheme() {
+				if (document.documentElement.classList.contains('dark')) {
+					document.documentElement.classList.remove('dark');
+					localStorage.theme = 'light';
+				} else {
+					document.documentElement.classList.add('dark');
+					localStorage.theme = 'dark';
+				}
+			}
+		</script>
+	}
+}

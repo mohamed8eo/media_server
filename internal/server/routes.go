@@ -50,10 +50,8 @@ func (s *Server) RegisterUIRoutes(r chi.Router) {
 	// Protected UI pages (Redirects unauthenticated users to /sign-in)
 	r.Group(func(gr chi.Router) {
 		gr.Use(middleware.UIAuthMiddleware(s.db))
-		gr.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "text/html")
-			_, _ = w.Write([]byte(`<h1>Welcome to MediaServer Dashboard</h1><a href="/api/auth/logout">Logout</a>`))
-		})
+		gr.Get("/", templ.Handler(web.Home()).ServeHTTP)
+		gr.Get("/upload", templ.Handler(web.Upload()).ServeHTTP)
 	})
 }
 

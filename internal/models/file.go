@@ -12,6 +12,7 @@ type File struct {
 	Filename    string    `json:"filename"`
 	MimeType    string    `json:"mime_type"`
 	Size        int64     `json:"size"`
+	Folder      string    `json:"folder"`
 	StoragePath string    `json:"-"`
 	CreatedAt   time.Time `json:"created_at"`
 }

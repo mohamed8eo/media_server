@@ -27,7 +27,7 @@ type Service interface {
 	GetRefreshToken(token string) (*models.RefreshToken, error)
 	RevokeRefreshToken(token string) error
 	RevokeAllUserRefreshTokens(userID uuid.UUID) error
-	CreateFile(id, userID uuid.UUID, filename, mimeType string, size int64, storagePath string) error
+	CreateFile(id, userID uuid.UUID, filename, mimeType string, size int64, folder string, storagePath string) error
 	ListFilesByUser(userID uuid.UUID) ([]models.File, error)
 	GetFileByID(fileID uuid.UUID) (*models.File, error)
 }
@@ -91,6 +91,7 @@ func migrate(db *sql.DB) error {
 		filename TEXT NOT NULL,
 		mime_type TEXT NOT NULL,
 		size INTEGER NOT NULL,
+		folder TEXT NOT NULL DEFAULT '/',
 		storage_path TEXT NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -98,6 +99,9 @@ func migrate(db *sql.DB) error {
 
 	CREATE INDEX IF NOT EXISTS idx_files_user_id ON files(user_id);`
 	_, err := db.Exec(query)
+	if err == nil {
+		_, _ = db.Exec(`ALTER TABLE files ADD COLUMN folder TEXT NOT NULL DEFAULT '/'`)
+	}
 	return err
 }
 

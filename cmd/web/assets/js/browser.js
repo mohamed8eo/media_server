@@ -53,24 +53,24 @@ function getFoldersInFolder(folderPath) {
 
 function renderFolderCard(folder) {
     const name = folder.split('/').pop();
-    return `<div data-folder-path="${escapeHtml(folder)}" class="group relative cursor-pointer rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-lg hover:border-primary/50 transition-all duration-200 overflow-hidden folder-card">
-        <div class="aspect-video relative overflow-hidden bg-muted flex items-center justify-center">
-            <svg class="h-12 w-12 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M2.75 12.75V12A2.25 2.25 0 0 1 5 9.75h14A2.25 2.25 0 0 1 21.25 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/></svg>
+    return `<div data-folder-path="${escapeHtml(folder)}" class="group relative cursor-pointer rounded-xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-lg hover:border-indigo-500/50 transition-all duration-200 overflow-hidden folder-card">
+        <div class="aspect-video relative overflow-hidden bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center">
+            <svg class="h-12 w-12 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M2.75 12.75V12A2.25 2.25 0 0 1 5 9.75h14A2.25 2.25 0 0 1 21.25 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/></svg>
         </div>
         <div class="p-3 space-y-1">
-            <h4 class="text-sm font-medium leading-none truncate" title="${escapeHtml(folder)}">${escapeHtml(name)}</h4>
+            <h4 class="text-sm font-semibold leading-none truncate text-slate-900 dark:text-slate-100" title="${escapeHtml(folder)}">${escapeHtml(name)}</h4>
         </div>
     </div>`;
 }
 
 function renderFolderRow(folder) {
     const name = folder.split('/').pop();
-    return `<div data-folder-path="${escapeHtml(folder)}" class="group flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border last:border-0 folder-card">
-        <div class="w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0 flex items-center justify-center">
-            <svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M2.75 12.75V12A2.25 2.25 0 0 1 5 9.75h14A2.25 2.25 0 0 1 21.25 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/></svg>
+    return `<div data-folder-path="${escapeHtml(folder)}" class="group flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors border-b border-border dark:border-slate-800/60 last:border-0 folder-card">
+        <div class="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-900/60 shrink-0 flex items-center justify-center">
+            <svg class="h-5 w-5 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M2.75 12.75V12A2.25 2.25 0 0 1 5 9.75h14A2.25 2.25 0 0 1 21.25 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/></svg>
         </div>
         <div class="min-w-0 flex-1">
-            <h4 class="text-sm font-medium truncate" title="${escapeHtml(folder)}">${escapeHtml(name)}</h4>
+            <h4 class="text-sm font-semibold truncate text-slate-900 dark:text-slate-100" title="${escapeHtml(folder)}">${escapeHtml(name)}</h4>
         </div>
     </div>`;
 }
@@ -158,9 +158,9 @@ function updateActiveFilterTab() {
     const tabs = document.querySelectorAll('[data-filter]');
     tabs.forEach(tab => {
         if (tab.dataset.filter === currentFilter) {
-            tab.className = 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5 bg-background text-foreground shadow-sm';
+            tab.className = 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm';
         } else {
-            tab.className = 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5 text-muted-foreground hover:text-foreground';
+            tab.className = 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100';
         }
     });
     const titles = { all: 'All Media', video: 'Videos', image: 'Images', document: 'Documents', audio: 'Audio' };
@@ -280,20 +280,20 @@ function renderGridCard(f) {
     const displayName = getCleanName(f.filename);
     const actions = getFileActions(f);
 
-    return `<div data-file-id="${f.id}" class="group relative cursor-pointer rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-lg hover:border-primary/50 transition-all duration-200 overflow-hidden">
-        <div class="aspect-video relative overflow-hidden bg-muted">
+    return `<div data-file-id="${f.id}" class="group relative cursor-pointer rounded-xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-lg hover:border-indigo-500/50 transition-all duration-200 overflow-hidden">
+        <div class="aspect-video relative overflow-hidden bg-slate-100 dark:bg-slate-900/60">
             ${thumbHtml}
             <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
             <div class="absolute bottom-0 left-0 right-0 p-3 flex items-center gap-2 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
                 ${actions}
             </div>
         </div>
-        <div class="p-3 space-y-1">
+        <div class="p-3 space-y-1.5">
             <div class="flex items-center gap-2">
-                <span class="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary uppercase tracking-wider shrink-0">${badge}</span>
-                <h4 class="text-sm font-medium leading-none truncate" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
+                <span class="inline-flex items-center rounded-md bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shrink-0">${badge}</span>
+                <h4 class="text-sm font-medium leading-none truncate text-slate-900 dark:text-slate-100" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
             </div>
-            <div class="flex items-center justify-between text-xs text-muted-foreground">
+            <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                 <span>${formatSize(f.size)}</span>
                 <span>${formatDate(f.created_at)}</span>
             </div>
@@ -308,16 +308,16 @@ function renderListRow(f) {
     const displayName = getCleanName(f.filename);
     const actions = getFileActionsInline(f);
 
-    return `<div data-file-id="${f.id}" class="group flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border last:border-0">
-        <div class="w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0">
+    return `<div data-file-id="${f.id}" class="group flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors border-b border-border dark:border-slate-800/60 last:border-0">
+        <div class="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-900/60 shrink-0">
             ${thumbHtml}
         </div>
         <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
-                <h4 class="text-sm font-medium truncate" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
-                <span class="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0">${badge}</span>
+                <h4 class="text-sm font-medium truncate text-slate-900 dark:text-slate-100" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
+                <span class="inline-flex items-center rounded-md bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider shrink-0">${badge}</span>
             </div>
-            <p class="text-xs text-muted-foreground">${formatSize(f.size)} &middot; ${formatDate(f.created_at)}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">${formatSize(f.size)} &middot; ${formatDate(f.created_at)}</p>
         </div>
         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
             ${actions}
@@ -502,16 +502,16 @@ function renderRecentSection(containerId, files) {
             ? `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="w-full h-full items-center justify-center bg-muted hidden">${getFallbackIcon(f.mime_type)}</div>`
             : `<div class="w-full h-full flex items-center justify-center bg-muted">${getFallbackIcon(f.mime_type)}</div>`;
         const playBtn = cat === 'video' ? '<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><div class="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm"><svg class="h-5 w-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>' : '';
-        return `<div onclick="openFileById('${f.id}')" class="group relative flex-shrink-0 w-48 cursor-pointer rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-200 overflow-hidden">
-            <div class="aspect-video relative overflow-hidden bg-muted">
+        return `<div onclick="openFileById('${f.id}')" class="group relative flex-shrink-0 w-48 cursor-pointer rounded-xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-md hover:border-indigo-500/50 transition-all duration-200 overflow-hidden">
+            <div class="aspect-video relative overflow-hidden bg-slate-100 dark:bg-slate-900/60">
                 ${thumbHtml}
                 ${playBtn}
             </div>
-            <div class="p-2 space-y-1">
-                <h4 class="text-xs font-medium leading-none truncate" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
-                <div class="flex items-center gap-1">
-                    <span class="text-[9px] font-semibold text-primary bg-primary/10 px-1 py-0.5 rounded uppercase">${badge}</span>
-                    <span class="text-[10px] text-muted-foreground">${formatSize(f.size)}</span>
+            <div class="p-2.5 space-y-1">
+                <h4 class="text-xs font-medium leading-none truncate text-slate-900 dark:text-slate-100" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-[9px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/20 px-1.5 py-0.5 rounded uppercase">${badge}</span>
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400">${formatSize(f.size)}</span>
                 </div>
             </div>
         </div>`;

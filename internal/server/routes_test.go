@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"mediaserver/internal/database"
@@ -33,6 +34,11 @@ func TestHandler(t *testing.T) {
 }
 
 func TestAuthMiddlewareUnauthorized(t *testing.T) {
+	os.Setenv("JWT_SECRET", "routes-test-secret")
+	os.Setenv("APP_ENV", "local")
+	os.Setenv("BLUEPRINT_DB_URL", "file:routes_auth_mw?mode=memory&cache=shared")
+	database.Reset()
+
 	s := &Server{db: database.New()}
 	handler := s.RegisterRoutes()
 	server := httptest.NewServer(handler)

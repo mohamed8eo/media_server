@@ -30,7 +30,6 @@ func NewRouter(db database.Service) http.Handler {
 
 	r := chi.NewRouter()
 
-	r.Use(middleware.AuthMiddleware)
 	r.Post("/", h.UploadHandler)
 	r.Get("/", h.ListHandler)
 

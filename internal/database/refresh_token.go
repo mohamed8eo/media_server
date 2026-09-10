@@ -2,11 +2,13 @@ package database
 
 import (
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"time"
 
-	"github.com/google/uuid"
 	"mediaserver/internal/models"
+
+	"github.com/google/uuid"
 )
 
 func hashToken(token string) string {
@@ -19,7 +21,7 @@ func (s *service) StoreRefreshToken(userID uuid.UUID, token string, expiresAt ti
 	hashedToken := hashToken(token)
 	_, err := s.db.Exec(
 		`INSERT INTO refresh_tokens (id, user_id, token, expires_at, revoked) VALUES (?, ?, ?, ?, 0)`,
-		id.String(), userID.String(), hashedToken, expiresAt,
+		id.String(), userID.String(), hashedToken, expiresAt.UTC(),
 	)
 	if err != nil {
 		return uuid.Nil, err
@@ -28,10 +30,21 @@ func (s *service) StoreRefreshToken(userID uuid.UUID, token string, expiresAt ti
 }
 
 func (s *service) GetRefreshToken(token string) (*models.RefreshToken, error) {
-	hashedToken := hashToken(token)
+	// Prefer hashed lookup; fall back to plaintext for tokens stored before hashing.
+	rt, err := s.lookupRefreshToken(hashToken(token))
+	if err == nil {
+		return rt, nil
+	}
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+	return s.lookupRefreshToken(token)
+}
+
+func (s *service) lookupRefreshToken(tokenValue string) (*models.RefreshToken, error) {
 	row := s.db.QueryRow(
 		`SELECT id, user_id, token, expires_at, revoked, created_at FROM refresh_tokens WHERE token = ?`,
-		hashedToken,
+		tokenValue,
 	)
 
 	var rt models.RefreshToken
@@ -48,9 +61,20 @@ func (s *service) GetRefreshToken(token string) (*models.RefreshToken, error) {
 
 func (s *service) RevokeRefreshToken(token string) error {
 	hashedToken := hashToken(token)
-	_, err := s.db.Exec(
+	res, err := s.db.Exec(
 		`UPDATE refresh_tokens SET revoked = 1 WHERE token = ?`,
 		hashedToken,
+	)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		return nil
+	}
+	// Fallback for plaintext rows stored before hashing.
+	_, err = s.db.Exec(
+		`UPDATE refresh_tokens SET revoked = 1 WHERE token = ?`,
+		token,
 	)
 	return err
 }

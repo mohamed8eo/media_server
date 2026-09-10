@@ -14,7 +14,7 @@ templ SignUp() {
 					<p class="text-sm text-slate-500">Sign up to get started with your media server</p>
 				</div>
 
-				<form class="space-y-5" hx-post="/api/auth/register" hx-target="#auth-response" hx-indicator="#spinner" hx-on::after-request="handleAuthResponse(event)">
+				<form class="space-y-5" hx-post="/api/auth/register" hx-target="#auth-response" hx-swap="innerHTML" hx-indicator="#spinner" hx-on::after-request="handleAuthResponse(event)">
 					<div class="space-y-4">
 						<div>
 							<label for="email" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Email</label>
@@ -112,6 +112,7 @@ templ SignUp() {
 				const emailInput = document.getElementById('email');
 				const passwordInput = document.getElementById('password');
 				const inlineError = document.getElementById('inline-error');
+				const authResponse = document.getElementById('auth-response');
 				if (xhr.status >= 400) {
 					if (emailInput) emailInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
 					if (passwordInput) passwordInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
@@ -122,6 +123,8 @@ templ SignUp() {
 						inlineError.textContent = span ? span.textContent : "Invalid email or password";
 						inlineError.classList.remove('hidden');
 					}
+					// Keep a single error surface; don't leave a duplicate HTMX swap behind.
+					if (authResponse) authResponse.innerHTML = '';
 				} else {
 					if (emailInput) {
 						emailInput.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
@@ -154,7 +157,7 @@ templ SignIn() {
 					<p class="text-sm text-slate-500">Welcome back! Please enter your details.</p>
 				</div>
 
-				<form class="space-y-5" hx-post="/api/auth/login" hx-target="#auth-response" hx-indicator="#spinner" hx-on::after-request="handleAuthResponse(event)">
+				<form class="space-y-5" hx-post="/api/auth/login" hx-target="#auth-response" hx-swap="innerHTML" hx-indicator="#spinner" hx-on::after-request="handleAuthResponse(event)">
 					<div class="space-y-4">
 						<div>
 							<label for="email" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Email</label>
@@ -217,6 +220,7 @@ templ SignIn() {
 				const emailInput = document.getElementById('email');
 				const passwordInput = document.getElementById('password');
 				const inlineError = document.getElementById('inline-error');
+				const authResponse = document.getElementById('auth-response');
 				if (xhr.status >= 400) {
 					if (emailInput) emailInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
 					if (passwordInput) passwordInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
@@ -227,6 +231,8 @@ templ SignIn() {
 						inlineError.textContent = span ? span.textContent : "Invalid email or password";
 						inlineError.classList.remove('hidden');
 					}
+					// Keep a single error surface; don't leave a duplicate HTMX swap behind.
+					if (authResponse) authResponse.innerHTML = '';
 				} else {
 					if (emailInput) {
 						emailInput.classList.remove('border-red-500', 'ring-1', 'ring-red-500');

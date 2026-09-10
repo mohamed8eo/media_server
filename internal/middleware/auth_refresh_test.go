@@ -16,16 +16,15 @@ import (
 
 func TestUIAuthMiddlewareSilentRefresh(t *testing.T) {
 	os.Setenv("JWT_SECRET", "test-secret-for-refresh")
-	os.Setenv("BLUEPRINT_DB_URL", "file:uiauthrefresh?mode=memory&cache=shared")
 	os.Setenv("APP_ENV", "local")
+	os.Setenv("BLUEPRINT_DB_URL", "file:uiauthrefresh?mode=memory&cache=shared")
+	database.Reset()
 
-	// Reset singleton by using unique memory db - database.New may reuse previous instance
 	db := database.New()
 	jwtService := auth.NewJWT(os.Getenv("JWT_SECRET"))
 
 	userID, err := db.CreateUser("refresh-ui@example.com", "hash")
 	if err != nil {
-		// maybe singleton from other test - try get by email path differently
 		t.Fatalf("CreateUser: %v", err)
 	}
 
@@ -82,6 +81,41 @@ func TestUIAuthMiddlewareSilentRefresh(t *testing.T) {
 	})
 }
 
+func TestAuthMiddlewareSilentRefresh(t *testing.T) {
+	os.Setenv("JWT_SECRET", "test-secret-for-api-refresh")
+	os.Setenv("APP_ENV", "local")
+	os.Setenv("BLUEPRINT_DB_URL", "file:apiauthrefresh?mode=memory&cache=shared")
+	database.Reset()
+
+	db := database.New()
+	jwtService := auth.NewJWT(os.Getenv("JWT_SECRET"))
+
+	userID, err := db.CreateUser("refresh-api@example.com", "hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	refreshToken, refreshExp, err := jwtService.GenerateRefreshToken(userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.StoreRefreshToken(userID, refreshToken, refreshExp); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := AuthMiddleware(db)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}))
+
+	req := httptest.NewRequest("GET", "/api/me", nil)
+	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken})
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("want 200 from silent refresh, got %d body=%s", rr.Code, rr.Body.String())
+	}
+}
+
 func makeExpiredAccessToken(t *testing.T, j *auth.JWT, userID uuid.UUID) string {
 	t.Helper()
 	now := time.Now().Add(-time.Hour)
@@ -93,7 +127,6 @@ func makeExpiredAccessToken(t *testing.T, j *auth.JWT, userID uuid.UUID) string 
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	}
-	// ExpiresAt already in the past relative to now... wait now is -1h, expires at -1h+1m still past
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString(j.Secret)
 	if err != nil {

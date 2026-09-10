@@ -65,7 +65,7 @@ func (s *Server) RegisterAPIRoutes(r chi.Router) {
 
 	// Protected API routes (Returns 401 Unauthorized for API clients)
 	r.Group(func(gr chi.Router) {
-		gr.Use(middleware.AuthMiddleware)
+		gr.Use(middleware.AuthMiddleware(s.db))
 		gr.Mount("/file", files.NewRouter(s.db))
 		gr.Get("/me", s.MeHandler)
 	})

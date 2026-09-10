@@ -119,8 +119,8 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setAuthCookie(w, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
-	setAuthCookie(w, "refresh_token", refreshToken, int(RefreshTokenDuration.Seconds()))
+	SetAuthCookie(w, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
+	SetAuthCookie(w, "refresh_token", refreshToken, int(RefreshTokenDuration.Seconds()))
 
 	// HTMX response.
 	if isHTMX(r) {
@@ -207,8 +207,8 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setAuthCookie(w, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
-	setAuthCookie(w, "refresh_token", refreshToken, int(RefreshTokenDuration.Seconds()))
+	SetAuthCookie(w, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
+	SetAuthCookie(w, "refresh_token", refreshToken, int(RefreshTokenDuration.Seconds()))
 
 	// HTMX response.
 	if isHTMX(r) {
@@ -244,11 +244,11 @@ func (h *AuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		_ = h.db.RevokeRefreshToken(cookie.Value)
 	}
 
-	setAuthCookie(w, "access_token", "", -1)
-	setAuthCookie(w, "refresh_token", "", -1)
+	SetAuthCookie(w, "access_token", "", -1)
+	SetAuthCookie(w, "refresh_token", "", -1)
 
 	if isHTMX(r) {
-		w.Header().Set("HX-Redirect", "/login")
+		w.Header().Set("HX-Redirect", "/sign-in")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`<span>Logged out successfully</span>`))
 		return
@@ -315,42 +315,33 @@ func isHTMX(r *http.Request) bool {
 	return r.Header.Get("HX-Request") == "true"
 }
 
-func setAuthCookie(w http.ResponseWriter, tokenName, token string, maxAge int) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     tokenName,
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   os.Getenv("APP_ENV") != "local",
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   maxAge,
-	})
-}
-
 func (h *AuthHandler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
-	var refreshToken string
-
-	if cookie, err := r.Cookie("refresh_token"); err == nil && cookie != nil && cookie.Value != "" {
-		refreshToken = cookie.Value
-	} else {
-		var req RefreshRequest
-		if err := decodeRequest(r, &req); err == nil && req.RefreshToken != "" {
-			refreshToken = req.RefreshToken
+	if _, accessToken, ok := RefreshAccessFromCookie(w, r, h.db, h.jwt); ok {
+		if isHTMX(r) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`<span>Token refreshed successfully</span>`))
+			return
 		}
+		utils.RespondWithJSON(w, http.StatusOK, map[string]string{
+			"access_token": accessToken,
+		})
+		return
 	}
 
-	if refreshToken == "" {
+	// Fallback: refresh token in JSON/form body (API clients without cookies).
+	var req RefreshRequest
+	if err := decodeRequest(r, &req); err != nil || req.RefreshToken == "" {
 		h.errorResponse(w, r, http.StatusUnauthorized, "Missing refresh token")
 		return
 	}
 
-	claims, err := h.jwt.ValidateToken(refreshToken)
+	claims, err := h.jwt.ValidateToken(req.RefreshToken)
 	if err != nil || claims.Type != "refresh" {
 		h.errorResponse(w, r, http.StatusUnauthorized, "Invalid refresh token")
 		return
 	}
 
-	storedToken, err := h.db.GetRefreshToken(refreshToken)
+	storedToken, err := h.db.GetRefreshToken(req.RefreshToken)
 	if err != nil || storedToken.Revoked || time.Now().After(storedToken.ExpiresAt) {
 		h.errorResponse(w, r, http.StatusUnauthorized, "Refresh token is expired or revoked")
 		return
@@ -362,7 +353,7 @@ func (h *AuthHandler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setAuthCookie(w, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
+	SetAuthCookie(w, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
 
 	if isHTMX(r) {
 		w.WriteHeader(http.StatusOK)

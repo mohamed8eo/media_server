@@ -23,9 +23,8 @@ func TestE2ESilentRefreshAfterAccessExpiry(t *testing.T) {
 	os.Setenv("JWT_SECRET", "e2e-secret")
 	os.Setenv("APP_ENV", "local")
 	os.Setenv("BLUEPRINT_DB_URL", "file:e2e_refresh_manual?mode=memory&cache=shared")
+	database.Reset()
 
-	db := database.New()
-	_ = db
 	s := server.NewServer()
 	ts := httptest.NewServer(s.Handler)
 	defer ts.Close()
@@ -112,7 +111,7 @@ func TestE2ESilentRefreshAfterAccessExpiry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetRefreshToken: %v", err)
 	}
-	if stored.Revoked || !time.Now().Before(stored.ExpiresAt) {
+	if stored.Revoked || time.Now().After(stored.ExpiresAt) {
 		t.Fatalf("stored token invalid: %+v", stored)
 	}
 }

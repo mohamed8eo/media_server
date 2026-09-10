@@ -18,28 +18,38 @@ templ Base() {
 			<script src="assets/js/htmx.min.js"></script>
 			<script>
 				document.addEventListener('htmx:responseError', async function(evt) {
-					if (evt.detail.xhr.status === 401) {
-						if (evt.detail.pathInfo && evt.detail.pathInfo.requestPath.includes('/api/auth/refresh')) {
-							window.location.href = '/sign-in';
-							return;
-						}
+					if (evt.detail.xhr.status !== 401) {
+						return;
+					}
 
-						try {
-							const res = await fetch('/api/auth/refresh', {
-								method: 'POST',
-								credentials: 'include'
+					const path = (evt.detail.pathInfo && evt.detail.pathInfo.requestPath) || '';
+
+					// Failed login/register must not trigger the session-refresh redirect,
+					// or the form error flashes away on a full page reload.
+					if (path.includes('/api/auth/login') || path.includes('/api/auth/register')) {
+						return;
+					}
+
+					if (path.includes('/api/auth/refresh')) {
+						window.location.href = '/sign-in';
+						return;
+					}
+
+					try {
+						const res = await fetch('/api/auth/refresh', {
+							method: 'POST',
+							credentials: 'include'
+						});
+						if (res.ok) {
+							htmx.ajax(evt.detail.requestConfig.verb, path, {
+								target: evt.detail.target,
+								values: evt.detail.parameters
 							});
-							if (res.ok) {
-								htmx.ajax(evt.detail.requestConfig.verb, evt.detail.pathInfo.requestPath, {
-									target: evt.detail.target,
-									values: evt.detail.parameters
-								});
-							} else {
-								window.location.href = '/sign-in';
-							}
-						} catch (e) {
+						} else {
 							window.location.href = '/sign-in';
 						}
+					} catch (e) {
+						window.location.href = '/sign-in';
 					}
 				});
 			</script>

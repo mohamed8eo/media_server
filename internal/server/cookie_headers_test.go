@@ -8,14 +8,15 @@ import (
 	"strings"
 	"testing"
 
+	"mediaserver/internal/database"
 	"mediaserver/internal/server"
 )
 
 func TestLoginSetsBothAuthCookies(t *testing.T) {
 	os.Setenv("JWT_SECRET", "cookie-header-secret")
 	os.Setenv("APP_ENV", "local")
-	// Use unique name; may reuse singleton from other tests in package - still OK for cookie headers
 	os.Setenv("BLUEPRINT_DB_URL", "file:cookie_headers_db?mode=memory&cache=shared")
+	database.Reset()
 
 	s := server.NewServer()
 	ts := httptest.NewServer(s.Handler)
@@ -45,15 +46,10 @@ func TestLoginSetsBothAuthCookies(t *testing.T) {
 			}
 		}
 	}
-	if resp.StatusCode == http.StatusCreated || resp.StatusCode == http.StatusOK {
-		if !hasAccess || !hasRefresh {
-			t.Fatalf("missing cookies access=%v refresh=%v status=%d", hasAccess, hasRefresh, resp.StatusCode)
-		}
-	} else {
-		t.Logf("register status %d (db singleton may already have conflicting state)", resp.StatusCode)
-		// Still check if any auth cookies exist from a prior login path
-		for _, c := range cookies {
-			t.Logf("got cookie %s", c.Name)
-		}
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		t.Fatalf("register failed: %d", resp.StatusCode)
+	}
+	if !hasAccess || !hasRefresh {
+		t.Fatalf("missing cookies access=%v refresh=%v", hasAccess, hasRefresh)
 	}
 }

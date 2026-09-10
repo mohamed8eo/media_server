@@ -35,6 +35,9 @@ type Service interface {
 	ListRecentlyPlayed(userID uuid.UUID, limit int) ([]models.File, error)
 	GetUserStorageUsage(userID uuid.UUID) (int64, error)
 	GetUserFileCountByCategory(userID uuid.UUID) (map[string]int, error)
+	DeleteFile(fileID uuid.UUID) error
+	UpdateFilename(fileID uuid.UUID, filename string) error
+	UpdateFileFolder(fileID uuid.UUID, folder string) error
 }
 
 type service struct {

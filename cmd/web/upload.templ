@@ -10,14 +10,14 @@ templ Upload() {
 				<p class="text-sm text-muted-foreground">Drag and drop files to add them to your workspace</p>
 			</div>
 			<!-- Folder selector -->
-			<div class="flex items-center justify-between rounded-xl border bg-card text-card-foreground shadow-sm p-4">
-				<label for="upload-folder-select" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Upload to</label>
-				<select id="upload-folder-select" class="flex h-9 items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-auto min-w-[120px]">
+			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border bg-card text-card-foreground shadow-sm p-4">
+				<label for="upload-folder-select" class="text-sm font-medium leading-none">Upload to folder</label>
+				<select id="upload-folder-select" class="flex h-9 items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring w-full sm:w-auto sm:min-w-[160px]">
 					<option value="/">/</option>
 				</select>
 			</div>
 			<!-- Dropzone -->
-			<div id="dropzone" class="relative flex flex-col items-center justify-center rounded-xl border border-dashed p-12 text-center transition-colors hover:bg-muted/50 cursor-pointer">
+			<div id="dropzone" class="relative flex flex-col items-center justify-center rounded-xl border border-dashed p-6 sm:p-12 text-center transition-colors hover:bg-muted/50 cursor-pointer">
 				<input type="file" id="file-input" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
 				<div class="flex flex-col items-center justify-center space-y-4 pointer-events-none">
 					<div class="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
@@ -31,9 +31,9 @@ templ Upload() {
 			</div>
 			<!-- Upload Queue -->
 			<div id="upload-queue-container" class="hidden space-y-4">
-				<div class="flex items-center justify-between">
+				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
 					<h3 class="text-sm font-semibold leading-none tracking-tight">Upload Queue</h3>
-					<div class="flex items-center gap-2">
+					<div class="flex items-center justify-between sm:justify-end gap-2">
 						<span id="upload-status-text" class="text-xs text-muted-foreground">0 of 0 uploaded</span>
 						<a href="/" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-8 px-3 py-1">
 							View my files

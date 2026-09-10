@@ -38,6 +38,9 @@ func NewRouter(db database.Service) http.Handler {
 	r.Post("/mkdir", h.MkdirHandler)
 	r.Get("/{id}", h.GetFileHandler)
 	r.Get("/{id}/thumb", h.ThumbnailHandler)
+	r.Delete("/{id}", h.DeleteFileHandler)
+	r.Patch("/{id}/rename", h.RenameFileHandler)
+	r.Patch("/{id}/move", h.MoveFileHandler)
 	r.Get("/recent", h.RecentHandler)
 	r.Get("/stats", h.StatsHandler)
 
@@ -73,9 +76,11 @@ func (h *FileHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	folder := r.FormValue("folder")
 	if folder == "" || folder == "/" {
 		folder = ""
+	} else {
+		folder = strings.TrimPrefix(folder, "/")
 	}
 	folder = filepath.Clean(folder)
-	if folder == "." {
+	if folder == "." || folder == "" {
 		folder = ""
 	}
 
@@ -212,8 +217,8 @@ func (h *FileHandler) MkdirHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cleaned := filepath.Clean(req.Path)
-	if cleaned == "." || cleaned == "/" {
+	cleaned := filepath.Clean(strings.TrimPrefix(req.Path, "/"))
+	if cleaned == "." || cleaned == "" {
 		cleaned = ""
 	}
 
@@ -429,4 +434,107 @@ func (h *FileHandler) StatsHandler(w http.ResponseWriter, r *http.Request) {
 		FileCount:          fileCount,
 		Categories:         categories,
 	})
+}
+
+func (h *FileHandler) DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+
+	fileIDstr := chi.URLParam(r, "id")
+	fileID, err := uuid.Parse(fileIDstr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid file ID")
+		return
+	}
+
+	file, err := h.db.GetFileByID(fileID)
+	if err != nil || file.UserID != userID {
+		utils.RespondWithError(w, http.StatusNotFound, "File not found")
+		return
+	}
+
+	_ = os.Remove(file.StoragePath)
+	_ = os.Remove(file.StoragePath + ".thumb.jpg")
+
+	if err := h.db.DeleteFile(fileID); err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to delete file")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+func (h *FileHandler) RenameFileHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+
+	fileIDstr := chi.URLParam(r, "id")
+	fileID, err := uuid.Parse(fileIDstr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid file ID")
+		return
+	}
+
+	var req struct {
+		Filename string `json:"filename"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Filename == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "Missing filename")
+		return
+	}
+
+	file, err := h.db.GetFileByID(fileID)
+	if err != nil || file.UserID != userID {
+		utils.RespondWithError(w, http.StatusNotFound, "File not found")
+		return
+	}
+
+	if err := h.db.UpdateFilename(fileID, req.Filename); err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to update filename")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"filename": req.Filename})
+}
+
+func (h *FileHandler) MoveFileHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+
+	fileIDstr := chi.URLParam(r, "id")
+	fileID, err := uuid.Parse(fileIDstr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid file ID")
+		return
+	}
+
+	var req struct {
+		Folder string `json:"folder"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request")
+		return
+	}
+
+	file, err := h.db.GetFileByID(fileID)
+	if err != nil || file.UserID != userID {
+		utils.RespondWithError(w, http.StatusNotFound, "File not found")
+		return
+	}
+
+	if err := h.db.UpdateFileFolder(fileID, req.Folder); err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to move file")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"folder": req.Folder})
 }

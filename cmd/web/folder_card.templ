@@ -1,0 +1,31 @@
+package web
+
+import (
+	"strings"
+	"github.com/bryanvaz/go-templ-lucide-icons"
+)
+
+templ FolderCard(folderPath string, itemCount int) {
+	<div data-folder-path={ folderPath } class="group relative cursor-pointer rounded-xl border bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800 text-card-foreground p-3.5 hover:shadow-md hover:border-indigo-500/50 transition-all duration-200 flex items-center justify-between">
+		<div class="flex items-center gap-3 min-w-0">
+			<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
+				@icons.Folder(templ.Attributes{"class": "h-5 w-5"})
+			</div>
+			<div class="min-w-0">
+				<h4 class="text-sm font-semibold truncate text-slate-900 dark:text-slate-100" title={ folderPath }>{ getFolderName(folderPath) }</h4>
+				<p class="text-xs text-muted-foreground">Folder</p>
+			</div>
+		</div>
+		<span class="inline-flex items-center rounded-full bg-slate-200/60 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300 tabular-nums shrink-0">
+			{ folderPath }
+		</span>
+	</div>
+}
+
+func getFolderName(path string) string {
+	if path == "/" || path == "" {
+		return "Home"
+	}
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	return parts[len(parts)-1]
+}

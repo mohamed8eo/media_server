@@ -1,0 +1,39 @@
+package web
+
+import "github.com/bryanvaz/go-templ-lucide-icons"
+
+templ FileCard() {
+	<div class="group relative cursor-pointer rounded-xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-lg hover:border-indigo-500/50 transition-all duration-200 overflow-hidden">
+		<div class="aspect-video relative overflow-hidden bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center">
+			<!-- Thumbnail / Preview -->
+			<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+			<!-- Floating Action Bar on Hover -->
+			<div class="absolute bottom-2 left-2 right-2 p-1.5 flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-200 bg-background/80 dark:bg-slate-900/80 backdrop-blur-md rounded-lg border border-border dark:border-slate-800 shadow-lg">
+				<button data-action="play" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="Play / Preview">
+					@icons.Play(templ.Attributes{"class": "h-3.5 w-3.5"})
+				</button>
+				<button data-action="download" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="Download">
+					@icons.Download(templ.Attributes{"class": "h-3.5 w-3.5"})
+				</button>
+				<button data-action="move" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="Move to Folder">
+					@icons.FolderInput(templ.Attributes{"class": "h-3.5 w-3.5"})
+				</button>
+				<div class="relative group/menu">
+					<button data-action="more" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="More">
+						@icons.MoreVertical(templ.Attributes{"class": "h-3.5 w-3.5"})
+					</button>
+				</div>
+			</div>
+		</div>
+		<div class="p-3 space-y-1.5">
+			<div class="flex items-center gap-2">
+				<span class="inline-flex items-center rounded-md bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shrink-0">FILE</span>
+				<h4 class="text-sm font-medium leading-none truncate text-slate-900 dark:text-slate-100">Filename</h4>
+			</div>
+			<div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+				<span>0 B</span>
+				<span>Date</span>
+			</div>
+		</div>
+	</div>
+}

@@ -1,6 +1,7 @@
 package database
 
 import (
+	"path/filepath"
 	"strings"
 
 	"mediaserver/internal/models"
@@ -8,10 +9,23 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s *service) CreateFile(id, userID uuid.UUID, filename, mimeType string, size int64, folder string, storagePath string) error {
-	if folder == "" {
-		folder = "/"
+func normalizeFolder(folder string) string {
+	if folder == "" || folder == "." {
+		return "/"
 	}
+	cleaned := filepath.Clean("/" + folder)
+	cleaned = filepath.ToSlash(cleaned)
+	if !strings.HasPrefix(cleaned, "/") {
+		cleaned = "/" + cleaned
+	}
+	if cleaned != "/" && strings.HasSuffix(cleaned, "/") {
+		cleaned = strings.TrimSuffix(cleaned, "/")
+	}
+	return cleaned
+}
+
+func (s *service) CreateFile(id, userID uuid.UUID, filename, mimeType string, size int64, folder string, storagePath string) error {
+	folder = normalizeFolder(folder)
 	_, err := s.db.Exec(
 		`INSERT INTO files (id, user_id, filename, mime_type, size, folder, storage_path) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		id.String(), userID.String(), filename, mimeType, size, folder, storagePath,
@@ -38,6 +52,7 @@ func (s *service) ListFilesByUser(userID uuid.UUID) ([]models.File, error) {
 		}
 		f.ID, _ = uuid.Parse(idStr)
 		f.UserID, _ = uuid.Parse(userIDStr)
+		f.Folder = normalizeFolder(f.Folder)
 		files = append(files, f)
 	}
 	return files, rows.Err()
@@ -56,6 +71,7 @@ func (s *service) GetFileByID(fileID uuid.UUID) (*models.File, error) {
 	}
 	f.ID, _ = uuid.Parse(idStr)
 	f.UserID, _ = uuid.Parse(userIDStr)
+	f.Folder = normalizeFolder(f.Folder)
 	return &f, nil
 }
 
@@ -89,6 +105,7 @@ func (s *service) ListRecentUploads(userID uuid.UUID, limit int) ([]models.File,
 		}
 		f.ID, _ = uuid.Parse(idStr)
 		f.UserID, _ = uuid.Parse(userIDStr)
+		f.Folder = normalizeFolder(f.Folder)
 		files = append(files, f)
 	}
 	return files, rows.Err()
@@ -116,6 +133,7 @@ func (s *service) ListRecentlyPlayed(userID uuid.UUID, limit int) ([]models.File
 		}
 		f.ID, _ = uuid.Parse(idStr)
 		f.UserID, _ = uuid.Parse(userIDStr)
+		f.Folder = normalizeFolder(f.Folder)
 		files = append(files, f)
 	}
 	return files, rows.Err()
@@ -161,4 +179,20 @@ func (s *service) GetUserFileCountByCategory(userID uuid.UUID) (map[string]int, 
 		}
 	}
 	return counts, rows.Err()
+}
+
+func (s *service) DeleteFile(fileID uuid.UUID) error {
+	_, err := s.db.Exec(`DELETE FROM files WHERE id = ?`, fileID.String())
+	return err
+}
+
+func (s *service) UpdateFilename(fileID uuid.UUID, filename string) error {
+	_, err := s.db.Exec(`UPDATE files SET filename = ? WHERE id = ?`, filename, fileID.String())
+	return err
+}
+
+func (s *service) UpdateFileFolder(fileID uuid.UUID, folder string) error {
+	folder = normalizeFolder(folder)
+	_, err := s.db.Exec(`UPDATE files SET folder = ? WHERE id = ?`, folder, fileID.String())
+	return err
 }

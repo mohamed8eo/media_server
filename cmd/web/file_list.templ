@@ -1,0 +1,29 @@
+package web
+
+import "github.com/bryanvaz/go-templ-lucide-icons"
+
+templ FileListRow() {
+	<div class="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors border-b border-border dark:border-slate-800/60 last:border-0">
+		<div class="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-900/60 shrink-0 flex items-center justify-center">
+			@icons.FileText(templ.Attributes{"class": "h-5 w-5 text-muted-foreground"})
+		</div>
+		<div class="min-w-0 flex-1">
+			<div class="flex items-center gap-2">
+				<h4 class="text-sm font-medium truncate text-slate-900 dark:text-slate-100">Filename</h4>
+				<span class="inline-flex items-center rounded-md bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider shrink-0">FILE</span>
+			</div>
+			<p class="text-xs text-slate-500 dark:text-slate-400 truncate">0 B <span class="hidden sm:inline">&middot; Date</span></p>
+		</div>
+		<div class="flex items-center gap-1 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+			<button data-action="play" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8" title="Play">
+				@icons.Play(templ.Attributes{"class": "h-4 w-4"})
+			</button>
+			<button data-action="download" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8" title="Download">
+				@icons.Download(templ.Attributes{"class": "h-4 w-4"})
+			</button>
+			<button data-action="more" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8" title="More">
+				@icons.MoreVertical(templ.Attributes{"class": "h-4 w-4"})
+			</button>
+		</div>
+	</div>
+}

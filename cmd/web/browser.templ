@@ -8,44 +8,44 @@ templ Browser(currentPage string) {
 		@RecentSection()
 		<!-- Toolbar -->
 		<div class="space-y-4">
-			<div id="breadcrumbs" class="flex items-center gap-1.5 text-sm text-muted-foreground"></div>
-			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+			<div id="breadcrumbs" class="flex items-center gap-1.5 text-sm text-muted-foreground overflow-x-auto whitespace-nowrap pb-1"></div>
+			<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 				<div class="flex items-center gap-2">
-					<h2 class="text-lg font-semibold tracking-tight" id="section-title">All Media</h2>
-					<span id="file-count" class="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md tabular-nums"></span>
+					<h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100" id="section-title">All Media</h2>
+					<span id="file-count" class="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-lg tabular-nums font-medium"></span>
 				</div>
-				<div class="flex items-center gap-3">
+				<div class="flex flex-wrap lg:flex-nowrap items-center gap-2.5">
 					<!-- Filter tabs -->
-					<div class="flex items-center border rounded-lg p-0.5 bg-muted/50" id="filter-tabs">
-						<button onclick="setFilter('all')" data-filter="all" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
+					<div class="flex items-center border border-border dark:border-slate-800 rounded-xl p-1 bg-muted/50 overflow-x-auto whitespace-nowrap scrollbar-none max-w-full h-10" id="filter-tabs">
+						<button onclick="setFilter('all')" data-filter="all" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8">
 							@icons.Layers(templ.Attributes{"class": "h-3.5 w-3.5"})
 							All
 						</button>
-						<button onclick="setFilter('video')" data-filter="video" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
+						<button onclick="setFilter('video')" data-filter="video" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8">
 							@icons.Video(templ.Attributes{"class": "h-3.5 w-3.5"})
 							Videos
 						</button>
-						<button onclick="setFilter('image')" data-filter="image" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
+						<button onclick="setFilter('image')" data-filter="image" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8">
 							@icons.Image(templ.Attributes{"class": "h-3.5 w-3.5"})
 							Images
 						</button>
-						<button onclick="setFilter('document')" data-filter="document" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5">
+						<button onclick="setFilter('document')" data-filter="document" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8">
 							@icons.FileText(templ.Attributes{"class": "h-3.5 w-3.5"})
 							Docs
 						</button>
 					</div>
 					<!-- Search -->
-					<div class="relative">
-						@icons.Search(templ.Attributes{"class": "absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"})
+					<div class="relative w-full sm:w-auto">
+						@icons.Search(templ.Attributes{"class": "absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"})
 						<input
 							type="text"
 							id="file-search"
-							placeholder="Search..."
-							class="flex h-9 w-48 rounded-lg border border-input bg-transparent pl-9 pr-4 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+							placeholder="Search files & folders..."
+							class="flex h-10 w-full sm:w-56 rounded-xl border border-input dark:border-slate-800 bg-background dark:bg-slate-900/60 pl-10 pr-4 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 						/>
 					</div>
 					<!-- Sort -->
-					<select id="file-sort" class="flex h-9 items-center justify-between whitespace-nowrap rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+					<select id="file-sort" class="flex h-10 items-center justify-between whitespace-nowrap rounded-xl border border-input dark:border-slate-800 bg-background dark:bg-slate-900/60 px-3.5 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
 						<option value="date-desc">Newest</option>
 						<option value="date-asc">Oldest</option>
 						<option value="name-asc">Name A-Z</option>
@@ -54,47 +54,75 @@ templ Browser(currentPage string) {
 						<option value="size-asc">Smallest</option>
 					</select>
 					<!-- New folder button -->
-					<button onclick="createNewFolder()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3 py-2" title="New Folder">
+					<button onclick="createNewFolder()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors border border-input dark:border-slate-800 bg-background dark:bg-slate-900/60 shadow-sm hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 cursor-pointer" title="New Folder">
 						@icons.FolderPlus(templ.Attributes{"class": "h-4 w-4"})
 						<span class="hidden md:inline">New Folder</span>
 					</button>
+					<!-- Upload button -->
+					<a href="/upload" id="toolbar-upload-btn" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-4 py-2 cursor-pointer" title="Upload files">
+						@icons.Upload(templ.Attributes{"class": "h-4 w-4"})
+						<span class="hidden md:inline">Upload</span>
+					</a>
 					<!-- View toggle -->
-					<div class="flex items-center border rounded-lg p-0.5 bg-muted/50">
-						<button id="view-grid" onclick="setFileView('grid')" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors h-8 w-8" title="Grid view">
+					<div class="flex items-center border border-border dark:border-slate-800 rounded-xl p-1 bg-muted/50 shrink-0 h-10">
+						<button id="view-grid" onclick="setFileView('grid')" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors h-8 w-8" title="Grid view">
 							@icons.LayoutGrid(templ.Attributes{"class": "h-4 w-4"})
 						</button>
-						<button id="view-list" onclick="setFileView('list')" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors h-8 w-8" title="List view">
+						<button id="view-list" onclick="setFileView('list')" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors h-8 w-8" title="List view">
 							@icons.List(templ.Attributes{"class": "h-4 w-4"})
 						</button>
 					</div>
 				</div>
 			</div>
 		</div>
-		<!-- File Container -->
-		<div id="file-container">
+
+		<!-- Content Sections: Folders First, Files Below -->
+		<div id="file-container" class="space-y-8">
 			<div id="file-loading" class="flex flex-col items-center justify-center py-20 text-muted-foreground">
 				@icons.Loader(templ.Attributes{"class": "animate-spin h-8 w-8 mb-3"})
 				<p class="text-sm">Loading your media...</p>
 			</div>
-			<div id="file-empty" class="hidden flex flex-col items-center justify-center rounded-xl border border-dashed p-12 text-center">
-				<div class="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
-					@icons.Folder(templ.Attributes{"class": "h-10 w-10 text-muted-foreground"})
+
+			<div id="file-empty" class="hidden flex flex-col items-center justify-center rounded-2xl border border-dashed border-border dark:border-slate-800 p-12 text-center bg-card/40">
+				<div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-muted/80 text-muted-foreground shadow-sm">
+					@icons.Folder(templ.Attributes{"class": "h-10 w-10"})
 				</div>
-				<h3 class="mt-4 text-lg font-semibold">No files here</h3>
-				<p class="mb-4 mt-2 text-sm text-muted-foreground">Upload files or create a subfolder to get started.</p>
-				<div class="flex items-center gap-2">
-					<a href="/upload" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
+				<h3 class="mt-4 text-lg font-semibold text-slate-900 dark:text-slate-100">No media here yet</h3>
+				<p class="mb-6 mt-1.5 text-sm text-muted-foreground max-w-sm">Upload files or create a subfolder to organize your media library.</p>
+				<div class="flex items-center gap-3">
+					<a href="/upload" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-5 py-2">
 						@icons.Upload(templ.Attributes{"class": "h-4 w-4"})
-						Upload
+						Upload Files
 					</a>
-					<button onclick="createNewFolder()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+					<button onclick="createNewFolder()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors border border-input dark:border-slate-800 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent h-10 px-5 py-2">
 						@icons.FolderPlus(templ.Attributes{"class": "h-4 w-4"})
-						New folder
+						New Folder
 					</button>
 				</div>
 			</div>
-			<div id="file-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
-			<div id="file-list" class="hidden rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden"></div>
+
+			<!-- Folders Section -->
+			<div id="folder-section" class="space-y-3">
+				<div class="flex items-center justify-between">
+					<h3 class="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-300 uppercase">Folders</h3>
+					<span id="folder-count" class="text-xs text-muted-foreground tabular-nums"></span>
+				</div>
+				<div id="folder-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5"></div>
+			</div>
+
+			<!-- Files Section -->
+			<div id="file-section" class="space-y-3">
+				<div class="flex items-center justify-between">
+					<h3 class="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-300 uppercase">Files</h3>
+					<span id="file-items-count" class="text-xs text-muted-foreground tabular-nums"></span>
+				</div>
+				<div id="file-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4"></div>
+				<div id="file-list" class="hidden rounded-2xl border border-border dark:border-slate-800 bg-card text-card-foreground shadow-sm overflow-hidden"></div>
+			</div>
 		</div>
 	</div>
+	<style>
+		.scrollbar-none::-webkit-scrollbar { display: none; }
+		.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+	</style>
 }

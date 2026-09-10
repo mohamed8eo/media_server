@@ -25,7 +25,7 @@ function showDialog({ title, description, placeholder, defaultValue, confirmText
           <button data-dialog-cancel class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-background px-4 py-2 text-sm font-medium text-popover-foreground shadow-sm transition-colors border border-input hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
             ${escapeHtml(cancelText || 'Cancel')}
           </button>
-          <button data-dialog-confirm class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 ${btnVariant}">
+          <button data-dialog-confirm class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 ${btnVariant}">
             ${escapeHtml(confirmText || 'OK')}
           </button>
         </div>

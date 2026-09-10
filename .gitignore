@@ -30,7 +30,11 @@ db/
 
 # Project build
 main
+api
 *templ.go
+
+# User file storage
+storage/
 
 # OS X generated file
 .DS_Store

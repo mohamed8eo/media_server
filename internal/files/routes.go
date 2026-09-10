@@ -37,6 +37,9 @@ func NewRouter(db database.Service) http.Handler {
 	r.Get("/", h.ListHandler)
 	r.Post("/mkdir", h.MkdirHandler)
 	r.Get("/{id}", h.GetFileHandler)
+	r.Get("/{id}/thumb", h.ThumbnailHandler)
+	r.Get("/recent", h.RecentHandler)
+	r.Get("/stats", h.StatsHandler)
 
 	return r
 }
@@ -152,6 +155,8 @@ func (h *FileHandler) GetFileHandler(w http.ResponseWriter, r *http.Request) {
 		utils.RespondWithError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
+
+	_ = h.db.UpdateLastAccessed(fileID)
 
 	f, err := os.Open(file.StoragePath)
 	if err != nil {
@@ -300,4 +305,114 @@ func scanFolders(root, base string) []string {
 	}
 
 	return sorted
+}
+
+func (h *FileHandler) ThumbnailHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+
+	fileIDstr := chi.URLParam(r, "id")
+	fileID, err := uuid.Parse(fileIDstr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid file ID")
+		return
+	}
+
+	file, err := h.db.GetFileByID(fileID)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusNotFound, "File not found")
+		return
+	}
+
+	if file.UserID != userID {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	thumbPath, err := GenerateThumbnail(file.StoragePath, file.MimeType)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusNotFound, "Thumbnail not available")
+		return
+	}
+
+	f, err := os.Open(thumbPath)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusNotFound, "Thumbnail not available")
+		return
+	}
+	defer f.Close()
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	http.ServeContent(w, r, "thumb.jpg", file.CreatedAt, f)
+}
+
+type RecentResponse struct {
+	RecentUploads  []models.File `json:"recent_uploads"`
+	RecentlyPlayed []models.File `json:"recently_played"`
+}
+
+func (h *FileHandler) RecentHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+
+	limit := 10
+
+	recentUploads, err := h.db.ListRecentUploads(userID, limit)
+	if err != nil {
+		recentUploads = []models.File{}
+	}
+
+	recentlyPlayed, err := h.db.ListRecentlyPlayed(userID, limit)
+	if err != nil {
+		recentlyPlayed = []models.File{}
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, RecentResponse{
+		RecentUploads:  recentUploads,
+		RecentlyPlayed: recentlyPlayed,
+	})
+}
+
+type StatsResponse struct {
+	TotalSize   int64         `json:"total_size"`
+	FileCount   int           `json:"file_count"`
+	Categories  map[string]int `json:"categories"`
+	TotalSizeFormatted string `json:"total_size_formatted"`
+}
+
+func (h *FileHandler) StatsHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+
+	totalSize, err := h.db.GetUserStorageUsage(userID)
+	if err != nil {
+		totalSize = 0
+	}
+
+	categories, err := h.db.GetUserFileCountByCategory(userID)
+	if err != nil {
+		categories = make(map[string]int)
+	}
+
+	fileCount := 0
+	for _, count := range categories {
+		fileCount += count
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, StatsResponse{
+		TotalSize:          totalSize,
+		TotalSizeFormatted: models.FormatSize(totalSize),
+		FileCount:          fileCount,
+		Categories:         categories,
+	})
 }

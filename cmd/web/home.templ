@@ -3,7 +3,7 @@ package web
 import "github.com/bryanvaz/go-templ-lucide-icons"
 
 templ Home() {
-	@AppShell("home") {
+	@AppShell("all") {
 		<div class="space-y-4">
 			<!-- Drop overlay -->
 			<div id="drop-overlay" class="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm hidden items-center justify-center">
@@ -15,11 +15,9 @@ templ Home() {
 					<p class="text-sm text-muted-foreground">Files will be added instantly to your workspace</p>
 				</div>
 			</div>
-
-			@Browser()
+			@Browser("all")
 		</div>
-
-		<script src="/assets/js/browser.js"></script>
+		<script src="/assets/js/browser.js?v=2"></script>
 		<script src="/assets/js/upload.js"></script>
 		<script>
 			document.addEventListener('DOMContentLoaded', () => {

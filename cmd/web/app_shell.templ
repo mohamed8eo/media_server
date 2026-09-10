@@ -4,40 +4,24 @@ import "github.com/bryanvaz/go-templ-lucide-icons"
 
 templ AppShell(currentPage string) {
 	@Base() {
-		<div class="flex min-h-screen w-full flex-col bg-background">
-			<header class="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-muted/40 px-4 backdrop-blur supports-[backdrop-filter]:bg-muted/60 md:px-6">
-				<nav class="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm">
-					<a href="/" class="flex items-center gap-2 text-lg font-semibold md:text-base">
-						<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-							@icons.Folder(templ.Attributes{"class": "h-4 w-4"})
-						</div>
-						<span class="hidden lg:block">MediaServer</span>
-					</a>
-					<a href="/" class={ "transition-colors hover:text-foreground", templ.KV("text-foreground", currentPage == "home"), templ.KV("text-muted-foreground", currentPage != "home") }>
-						Files
-					</a>
-					<a href="/upload" class={ "transition-colors hover:text-foreground", templ.KV("text-foreground", currentPage == "upload"), templ.KV("text-muted-foreground", currentPage != "upload") }>
-						Upload
-					</a>
-				</nav>
-				<div class="flex w-full items-center gap-4 md:ml-auto md:max-w-sm">
+		<div class="flex min-h-screen bg-background">
+			@Sidebar(currentPage)
+			<div class="flex flex-1 flex-col pl-64">
+				<!-- Top bar -->
+				<header class="sticky top-0 z-40 flex h-14 items-center gap-4 border-b px-6 border-border bg-card/80 backdrop-blur-md">
 					<div class="flex-1"></div>
 					<button onclick="toggleTheme()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 w-9">
 						@icons.Moon(templ.Attributes{"class": "h-4 w-4 block dark:hidden"})
 						@icons.Sun(templ.Attributes{"class": "h-4 w-4 hidden dark:block"})
 					</button>
-					<a href="/upload" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
-						@icons.Upload(templ.Attributes{"class": "h-4 w-4"})
-						Upload
-					</a>
 					<a href="/api/auth/logout" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 w-9">
 						@icons.LogOut(templ.Attributes{"class": "h-4 w-4"})
 					</a>
-				</div>
-			</header>
-			<main class="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-				{ children... }
-			</main>
+				</header>
+				<main class="flex-1 gap-4 p-6 md:gap-8">
+					{ children... }
+				</main>
+			</div>
 		</div>
 		<script>
 			function toggleTheme() {

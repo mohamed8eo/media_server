@@ -30,6 +30,11 @@ type Service interface {
 	CreateFile(id, userID uuid.UUID, filename, mimeType string, size int64, folder string, storagePath string) error
 	ListFilesByUser(userID uuid.UUID) ([]models.File, error)
 	GetFileByID(fileID uuid.UUID) (*models.File, error)
+	UpdateLastAccessed(fileID uuid.UUID) error
+	ListRecentUploads(userID uuid.UUID, limit int) ([]models.File, error)
+	ListRecentlyPlayed(userID uuid.UUID, limit int) ([]models.File, error)
+	GetUserStorageUsage(userID uuid.UUID) (int64, error)
+	GetUserFileCountByCategory(userID uuid.UUID) (map[string]int, error)
 }
 
 type service struct {
@@ -101,6 +106,7 @@ func migrate(db *sql.DB) error {
 	_, err := db.Exec(query)
 	if err == nil {
 		_, _ = db.Exec(`ALTER TABLE files ADD COLUMN folder TEXT NOT NULL DEFAULT '/'`)
+		_, _ = db.Exec(`ALTER TABLE files ADD COLUMN last_accessed TIMESTAMP`)
 	}
 	return err
 }

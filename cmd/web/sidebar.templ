@@ -1,0 +1,68 @@
+package web
+
+import "github.com/bryanvaz/go-templ-lucide-icons"
+
+templ Sidebar(currentPage string) {
+	<aside class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-card border-border">
+		<!-- Logo -->
+		<div class="flex h-14 items-center gap-2 border-b px-4 border-border">
+			<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+				@icons.Play(templ.Attributes{"class": "h-4 w-4"})
+			</div>
+			<span class="text-lg font-semibold tracking-tight">MediaVault</span>
+		</div>
+		<!-- Navigation -->
+		<nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1" id="sidebar-nav">
+			<a href="/" data-nav="all" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent/50 hover:text-foreground">
+				@icons.Library(templ.Attributes{"class": "h-4 w-4"})
+				All Media
+			</a>
+			<a href="/?type=video" data-nav="video" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent/50 hover:text-foreground">
+				@icons.Video(templ.Attributes{"class": "h-4 w-4"})
+				Videos
+			</a>
+			<a href="/?type=image" data-nav="image" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent/50 hover:text-foreground">
+				@icons.Image(templ.Attributes{"class": "h-4 w-4"})
+				Images
+			</a>
+			<a href="/?type=document" data-nav="document" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent/50 hover:text-foreground">
+				@icons.FileText(templ.Attributes{"class": "h-4 w-4"})
+				Documents
+			</a>
+			<a href="/upload" data-nav="upload" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent/50 hover:text-foreground">
+				@icons.Upload(templ.Attributes{"class": "h-4 w-4"})
+				Upload
+			</a>
+		</nav>
+		<!-- Bottom Section -->
+		<div class="border-t px-3 py-4 space-y-1 border-border">
+			<a href="/settings" data-nav="settings" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent/50 hover:text-foreground">
+				@icons.Settings(templ.Attributes{"class": "h-4 w-4"})
+				Settings
+			</a>
+		</div>
+	</aside>
+	<script>
+		function updateSidebarActive() {
+			const params = new URLSearchParams(window.location.search);
+			const type = params.get('type');
+			const path = window.location.pathname;
+			let active = 'all';
+			if (path === '/upload') active = 'upload';
+			else if (path === '/settings') active = 'settings';
+			else if (type === 'video') active = 'video';
+			else if (type === 'image') active = 'image';
+			else if (type === 'document') active = 'document';
+			document.querySelectorAll('#sidebar-nav a[data-nav], [data-nav]').forEach(link => {
+				if (link.dataset.nav === active) {
+					link.className = 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors bg-accent text-accent-foreground';
+				} else {
+					link.className = 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent/50 hover:text-foreground';
+				}
+			});
+		}
+		updateSidebarActive();
+		window.addEventListener('popstate', updateSidebarActive);
+	</script>
+}
+

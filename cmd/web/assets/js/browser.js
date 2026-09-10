@@ -1,10 +1,14 @@
 let allFiles = [];
 let allFolders = ['/'];
 let currentView = localStorage.getItem('file_view') || 'grid';
+let currentFilter = new URLSearchParams(window.location.search).get('type') || 'all';
+let currentFolder = '/';
 
 function initFileBrowser() {
     setFileView(currentView, false);
+    setFilter(currentFilter, false);
     fetchFiles();
+    fetchRecent();
 
     const searchInput = document.getElementById('file-search');
     if (searchInput) searchInput.addEventListener('input', () => renderFiles());
@@ -13,133 +17,86 @@ function initFileBrowser() {
 }
 
 function getCurrentFolder() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('folder') || '/';
+    return currentFolder;
 }
 
 function navigateToFolder(path) {
-    if (path === '/') {
-        window.history.pushState({}, '', '/');
-    } else {
-        window.history.pushState({}, '', '?folder=' + encodeURIComponent(path));
-    }
+    currentFolder = path;
+    const params = new URLSearchParams(window.location.search);
+    params.delete('folder');
+    if (path !== '/') params.set('folder', path);
+    const qs = params.toString();
+    window.history.pushState({}, '', qs ? '?' + qs : '/');
     renderAll();
 }
 
-window.addEventListener('popstate', () => renderAll());
+window.addEventListener('popstate', () => {
+    const params = new URLSearchParams(window.location.search);
+    currentFolder = params.get('folder') || '/';
+    currentFilter = params.get('type') || 'all';
+    setFilter(currentFilter, false);
+    renderAll();
+});
 
 function renderAll() {
-    renderBreadcrumbs();
-    renderFolders();
     renderFiles();
-}
-
-function getSubfolders(parentPath) {
-    const prefix = parentPath === '/' ? '/' : parentPath + '/';
-    const matched = new Set();
-    allFolders.forEach(f => {
-        if (f === parentPath) return;
-        if (f === '/') return;
-        if (f === prefix.slice(0, -1)) return;
-        if (f.startsWith(prefix)) {
-            const relative = f.slice(prefix.length);
-            const child = relative.split('/')[0];
-            if (child) matched.add(prefix + child);
-        } else if (parentPath !== '/' && f.startsWith('/') && !f.includes('/', 1)) {
-            if (parentPath.split('/').length === 1) {
-                matched.add(f);
-            }
-        }
-    });
-    if (parentPath === '/') {
-        allFolders.forEach(f => {
-            if (f === '/') return;
-            const parts = f.split('/').filter(Boolean);
-            if (parts.length === 1) matched.add('/' + parts[0]);
-        });
-    }
-    return Array.from(matched).sort();
+    updateActiveFilterTab();
 }
 
 function getFilesInFolder(folderPath) {
-    return allFiles.filter(f => (f.folder || '/') === folderPath);
+    let files = allFiles.filter(f => (f.folder || '/') === folderPath);
+    if (currentFilter && currentFilter !== 'all') {
+        files = files.filter(f => getCategoryFromMime(f.mime_type) === currentFilter);
+    }
+    return files;
 }
 
-function renderBreadcrumbs() {
-    const el = document.getElementById('breadcrumbs');
-    if (!el) return;
-    const current = getCurrentFolder();
-    if (current === '/') {
-        el.innerHTML = '<span class="text-sm font-medium">My files</span>';
-        return;
+function getCategoryFromMime(mime) {
+    if (!mime) return 'other';
+    if (mime.startsWith('video/')) return 'video';
+    if (mime.startsWith('image/')) return 'image';
+    if (mime.startsWith('audio/')) return 'audio';
+    if (mime.includes('pdf') || mime.includes('document') || mime.includes('word') || mime.includes('sheet') || mime.includes('text/')) return 'document';
+    return 'other';
+}
+
+function setFilter(filter, updateUrl = true) {
+    currentFilter = filter;
+    if (updateUrl) {
+        const params = new URLSearchParams(window.location.search);
+        params.delete('type');
+        if (filter && filter !== 'all') params.set('type', filter);
+        const qs = params.toString();
+        window.history.replaceState({}, '', qs ? '?' + qs : '/');
     }
-    const parts = current.split('/').filter(Boolean);
-    let path = '';
-    let html = '<button onclick="navigateToFolder(\'/\')" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">My files</button>';
-    parts.forEach((part, i) => {
-        path += '/' + part;
-        const isLast = i === parts.length - 1;
-        html += '<svg class="h-4 w-4 text-muted-foreground/50 mx-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>';
-        if (isLast) {
-            html += '<span class="text-sm font-medium truncate">' + escapeHtml(part) + '</span>';
+    updateActiveFilterTab();
+    if (typeof updateSidebarActive === 'function') updateSidebarActive();
+    renderFiles();
+}
+
+function updateActiveFilterTab() {
+    const tabs = document.querySelectorAll('[data-filter]');
+    tabs.forEach(tab => {
+        if (tab.dataset.filter === currentFilter) {
+            tab.className = 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5 bg-background text-foreground shadow-sm';
         } else {
-            const p = path;
-            html += '<button onclick="navigateToFolder(\'' + escapeHtml(p) + '\')" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">' + escapeHtml(part) + '</button>';
+            tab.className = 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors px-3 py-1.5 text-muted-foreground hover:text-foreground';
         }
     });
-    el.innerHTML = html;
-}
-
-function renderFolders() {
-    const folderListEl = document.getElementById('folder-list');
-    if (!folderListEl) return;
-    const current = getCurrentFolder();
-    const subfolders = getSubfolders(current);
-
-    let html = '';
-    if (current !== '/') {
-        const parent = current.split('/').slice(0, -1).join('/') || '/';
-        html += '<button onclick="navigateToFolder(\'' + escapeHtml(parent) + '\')" class="w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"><svg class="h-4 w-4 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>Back</button>';
+    const titles = { all: 'All Media', video: 'Videos', image: 'Images', document: 'Documents', audio: 'Audio' };
+    const titleEl = document.getElementById('section-title');
+    if (titleEl) titleEl.textContent = titles[currentFilter] || 'All Media';
+    const recentSection = document.getElementById('recent-section');
+    if (recentSection) {
+        recentSection.classList.toggle('hidden', currentFilter && currentFilter !== 'all');
     }
-
-    subfolders.forEach(folder => {
-        const name = folder.split('/').pop();
-        const count = allFiles.filter(f => {
-            const ff = f.folder || '/';
-            return ff === folder || ff.startsWith(folder + '/');
-        }).length;
-        html += '<button onclick="navigateToFolder(\'' + escapeHtml(folder) + '\')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"><span class="flex items-center truncate"><svg class="h-4 w-4 mr-2 shrink-0 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg><span class="truncate">' + escapeHtml(name) + '</span></span><span class="text-xs rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground tabular-nums">' + count + '</span></button>';
-    });
-
-    if (subfolders.length === 0 && current === '/') {
-        html += '<p class="text-xs text-muted-foreground px-3 py-2">No folders yet</p>';
-    }
-    folderListEl.innerHTML = html;
-}
-
-async function createNewFolder() {
-    const current = getCurrentFolder();
-    const clean = await showFolderPrompt();
-    if (!clean) return;
-    const newPath = current === '/' ? '/' + clean : current + '/' + clean;
-
-    try {
-        const res = await fetch('/api/file/mkdir', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: newPath }),
-        });
-        if (!res.ok) throw new Error('Failed to create folder');
-        await fetchFiles();
-        navigateToFolder(newPath);
-    } catch (err) {
-        console.error(err);
+    const filterTabs = document.getElementById('filter-tabs');
+    if (filterTabs) {
+        filterTabs.classList.toggle('hidden', currentFilter && currentFilter !== 'all');
     }
 }
 
 function renderFiles() {
-    const current = getCurrentFolder();
     const emptyEl = document.getElementById('file-empty');
     const gridEl = document.getElementById('file-grid');
     const listEl = document.getElementById('file-list');
@@ -150,10 +107,13 @@ function renderFiles() {
     const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const sortBy = sortSelect ? sortSelect.value : 'date-desc';
 
-    let files = getFilesInFolder(current);
+    let files = getFilesInFolder(currentFolder);
 
     if (query) {
         files = allFiles.filter(f => f.filename.toLowerCase().includes(query));
+        if (currentFilter && currentFilter !== 'all') {
+            files = files.filter(f => getCategoryFromMime(f.mime_type) === currentFilter);
+        }
     }
 
     files.sort((a, b) => {
@@ -166,7 +126,7 @@ function renderFiles() {
         return 0;
     });
 
-    if (fileCountEl) fileCountEl.textContent = files.length + ' file' + (files.length !== 1 ? 's' : '');
+    if (fileCountEl) fileCountEl.textContent = files.length + ' item' + (files.length !== 1 ? 's' : '');
 
     if (files.length === 0) {
         if (emptyEl) emptyEl.classList.remove('hidden');
@@ -178,11 +138,16 @@ function renderFiles() {
     if (emptyEl) emptyEl.classList.add('hidden');
 
     if (gridEl) {
-        gridEl.innerHTML = files.map(f => '<div data-file-id="' + f.id + '" class="group cursor-pointer rounded-xl border bg-card text-card-foreground shadow-sm p-4 hover:shadow-md transition-all flex flex-col justify-between space-y-3"><div class="flex items-start justify-between"><div class="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">' + getMimeIconSvg(f.mime_type) + '</div><span class="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md uppercase tracking-wider">' + formatMimeBadge(f.mime_type) + '</span></div><div class="space-y-1 overflow-hidden"><h4 class="text-sm font-medium leading-none truncate" title="' + escapeHtml(f.filename) + '">' + escapeHtml(f.filename) + '</h4><div class="flex items-center justify-between text-xs text-muted-foreground"><span>' + formatSize(f.size) + '</span><span>' + formatDate(f.created_at) + '</span></div></div></div>').join('');
+        gridEl.innerHTML = files.map(f => renderGridCard(f)).join('');
         if (!gridEl._delegationBound) {
             gridEl.addEventListener('click', function(e) {
                 var card = e.target.closest('[data-file-id]');
                 if (!card) return;
+                var action = e.target.closest('[data-action]');
+                if (action) {
+                    handleFileAction(action.dataset.action, card.dataset.fileId);
+                    return;
+                }
                 var file = allFiles.find(function(f) { return f.id === card.dataset.fileId; });
                 if (file) openFile(file);
             });
@@ -191,17 +156,182 @@ function renderFiles() {
     }
 
     if (listEl) {
-        listEl.innerHTML = files.map(f => '<div data-file-id="' + f.id + '" class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"><div class="flex items-center gap-3 min-w-0 flex-1 mr-4"><div class="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground shrink-0">' + getMimeIconSvg(f.mime_type) + '</div><div class="min-w-0 flex-1"><h4 class="text-sm font-medium truncate" title="' + escapeHtml(f.filename) + '">' + escapeHtml(f.filename) + '</h4><p class="text-xs text-muted-foreground">' + formatMimeBadge(f.mime_type) + '</p></div></div><div class="flex items-center gap-6 text-xs text-muted-foreground shrink-0"><span>' + formatSize(f.size) + '</span><span class="w-24 text-right">' + formatDate(f.created_at) + '</span></div></div>').join('');
+        listEl.innerHTML = files.map(f => renderListRow(f)).join('');
         if (!listEl._delegationBound) {
             listEl.addEventListener('click', function(e) {
-                var card = e.target.closest('[data-file-id]');
-                if (!card) return;
-                var file = allFiles.find(function(f) { return f.id === card.dataset.fileId; });
+                var row = e.target.closest('[data-file-id]');
+                if (!row) return;
+                var action = e.target.closest('[data-action]');
+                if (action) {
+                    handleFileAction(action.dataset.action, row.dataset.fileId);
+                    return;
+                }
+                var file = allFiles.find(function(f) { return f.id === row.dataset.fileId; });
                 if (file) openFile(file);
             });
             listEl._delegationBound = true;
         }
     }
+}
+
+function renderGridCard(f) {
+    const cat = getCategoryFromMime(f.mime_type);
+    const thumbHtml = getThumbnailHtml(f);
+    const badge = getTypeBadge(f.mime_type);
+    const displayName = getCleanName(f.filename);
+    const actions = getFileActions(f);
+
+    return `<div data-file-id="${f.id}" class="group relative cursor-pointer rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-lg hover:border-primary/50 transition-all duration-200 overflow-hidden">
+        <div class="aspect-video relative overflow-hidden bg-muted">
+            ${thumbHtml}
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+            <div class="absolute bottom-0 left-0 right-0 p-3 flex items-center gap-2 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
+                ${actions}
+            </div>
+        </div>
+        <div class="p-3 space-y-1">
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary uppercase tracking-wider shrink-0">${badge}</span>
+                <h4 class="text-sm font-medium leading-none truncate" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
+            </div>
+            <div class="flex items-center justify-between text-xs text-muted-foreground">
+                <span>${formatSize(f.size)}</span>
+                <span>${formatDate(f.created_at)}</span>
+            </div>
+        </div>
+    </div>`;
+}
+
+function renderListRow(f) {
+    const cat = getCategoryFromMime(f.mime_type);
+    const thumbHtml = getThumbnailHtmlSmall(f);
+    const badge = getTypeBadge(f.mime_type);
+    const displayName = getCleanName(f.filename);
+    const actions = getFileActionsInline(f);
+
+    return `<div data-file-id="${f.id}" class="group flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border last:border-0">
+        <div class="w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0">
+            ${thumbHtml}
+        </div>
+        <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+                <h4 class="text-sm font-medium truncate" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
+                <span class="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0">${badge}</span>
+            </div>
+            <p class="text-xs text-muted-foreground">${formatSize(f.size)} &middot; ${formatDate(f.created_at)}</p>
+        </div>
+        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            ${actions}
+        </div>
+    </div>`;
+}
+
+function getThumbnailHtml(f) {
+    const cat = getCategoryFromMime(f.mime_type);
+    if (cat === 'image') {
+        return `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=getFallbackIcon('${f.mime_type}')" />`;
+    }
+    if (cat === 'video') {
+        return `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=getFallbackIcon('${f.mime_type}')" /><div class="absolute inset-0 flex items-center justify-center"><div class="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm"><svg class="h-6 w-6 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`;
+    }
+    return `<div class="w-full h-full flex items-center justify-center">${getFallbackIcon(f.mime_type)}</div>`;
+}
+
+function getThumbnailHtmlSmall(f) {
+    const cat = getCategoryFromMime(f.mime_type);
+    if (cat === 'image') {
+        return `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=getFallbackIconSm('${f.mime_type}')" />`;
+    }
+    if (cat === 'video') {
+        return `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=getFallbackIconSm('${f.mime_type}')" />`;
+    }
+    return `<div class="w-full h-full flex items-center justify-center">${getFallbackIconSm(f.mime_type)}</div>`;
+}
+
+window.getFallbackIcon = function(mime) {
+    const cat = getCategoryFromMime(mime);
+    const icons = {
+        video: '<svg class="h-10 w-10 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.777-.416L16 11"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>',
+        image: '<svg class="h-10 w-10 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+        audio: '<svg class="h-10 w-10 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+        document: '<svg class="h-10 w-10 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>',
+        other: '<svg class="h-10 w-10 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    };
+    return icons[cat] || icons.other;
+};
+
+window.getFallbackIconSm = function(mime) {
+    const cat = getCategoryFromMime(mime);
+    const icons = {
+        video: '<svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.777-.416L16 11"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>',
+        image: '<svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+        audio: '<svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+        document: '<svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>',
+        other: '<svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    };
+    return icons[cat] || icons.other;
+};
+
+function getFileActions(f) {
+    const cat = getCategoryFromMime(f.mime_type);
+    let html = '';
+    if (cat === 'video' || cat === 'image') {
+        html += `<button data-action="play" class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors" title="Play"><svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>`;
+    }
+    html += `<button data-action="download" class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors" title="Download"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
+    html += `<button data-action="share" class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors" title="Share link"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg></button>`;
+    return html;
+}
+
+function getFileActionsInline(f) {
+    const cat = getCategoryFromMime(f.mime_type);
+    let html = '';
+    if (cat === 'video' || cat === 'image') {
+        html += `<button data-action="play" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8" title="Play"><svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>`;
+    }
+    html += `<button data-action="download" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8" title="Download"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
+    html += `<button data-action="share" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8" title="Share link"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg></button>`;
+    return html;
+}
+
+function handleFileAction(action, fileId) {
+    const file = allFiles.find(f => f.id === fileId);
+    if (!file) return;
+    if (action === 'play') {
+        openFile(file);
+    } else if (action === 'download') {
+        window.location.href = '/api/file/' + file.id;
+    } else if (action === 'share') {
+        const url = window.location.origin + '/api/file/' + file.id;
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('Link copied to clipboard');
+        });
+    }
+}
+
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 z-[100] rounded-lg bg-foreground text-background px-4 py-2 text-sm font-medium shadow-lg animate-in fade-in slide-in-from-bottom-4';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.remove(); }, 2500);
+}
+
+function getCleanName(filename) {
+    const dotIndex = filename.lastIndexOf('.');
+    if (dotIndex > 0) return filename.substring(0, dotIndex);
+    return filename;
+}
+
+function getTypeBadge(mime) {
+    if (!mime) return 'FILE';
+    if (mime.startsWith('video/')) return mime.split('/')[1]?.toUpperCase().substring(0, 6) || 'VIDEO';
+    if (mime.startsWith('image/')) return mime.split('/')[1]?.toUpperCase().substring(0, 6) || 'IMAGE';
+    if (mime.includes('pdf')) return 'PDF';
+    if (mime.startsWith('audio/')) return mime.split('/')[1]?.toUpperCase().substring(0, 6) || 'AUDIO';
+    if (mime.includes('zip') || mime.includes('tar')) return 'ARCHIVE';
+    if (mime.includes('json') || mime.includes('javascript')) return 'CODE';
+    return 'FILE';
 }
 
 function setFileView(view, save = true) {
@@ -214,13 +344,13 @@ function setFileView(view, save = true) {
     if (view === 'grid') {
         if (gridEl) gridEl.classList.remove('hidden');
         if (listEl) listEl.classList.add('hidden');
-        if (btnGrid) btnGrid.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-medium transition-colors bg-accent text-accent-foreground h-7 w-7';
-        if (btnList) btnList.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-7 w-7';
+        if (btnGrid) btnGrid.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors h-8 w-8 bg-background text-foreground shadow-sm';
+        if (btnList) btnList.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground h-8 w-8';
     } else {
         if (gridEl) gridEl.classList.add('hidden');
         if (listEl) listEl.classList.remove('hidden');
-        if (btnGrid) btnGrid.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-7 w-7';
-        if (btnList) btnList.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-medium transition-colors bg-accent text-accent-foreground h-7 w-7';
+        if (btnGrid) btnGrid.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground h-8 w-8';
+        if (btnList) btnList.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors h-8 w-8 bg-background text-foreground shadow-sm';
     }
 }
 
@@ -241,57 +371,68 @@ async function fetchFiles() {
     }
 }
 
-function formatSize(bytes) {
-    if (bytes === 0) return '0 B';
-    const k = 1024, sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+async function fetchRecent() {
+    try {
+        const res = await fetch('/api/file/recent?limit=10', { method: 'GET', credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        renderRecentSection('recent-played', data.recently_played || []);
+        renderRecentSection('recent-uploaded', data.recent_uploads || []);
+    } catch (err) {
+        console.error(err);
+    }
 }
 
-function formatDate(dateStr) {
-    if (!dateStr) return '';
-    return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+function renderRecentSection(containerId, files) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (files.length === 0) {
+        el.classList.add('hidden');
+        const heading = el.previousElementSibling;
+        if (heading && heading.tagName === 'DIV') heading.classList.add('hidden');
+        return;
+    }
+    el.classList.remove('hidden');
+    const heading = el.previousElementSibling;
+    if (heading && heading.tagName === 'DIV') heading.classList.remove('hidden');
+    el.innerHTML = files.map(f => {
+        const cat = getCategoryFromMime(f.mime_type);
+        const displayName = getCleanName(f.filename);
+        const badge = getTypeBadge(f.mime_type);
+        const thumbHtml = cat === 'image' || cat === 'video'
+            ? `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="w-full h-full items-center justify-center bg-muted hidden">${getFallbackIcon(f.mime_type)}</div>`
+            : `<div class="w-full h-full flex items-center justify-center bg-muted">${getFallbackIcon(f.mime_type)}</div>`;
+        const playBtn = cat === 'video' ? '<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><div class="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm"><svg class="h-5 w-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>' : '';
+        return `<div onclick="openFileById('${f.id}')" class="group relative flex-shrink-0 w-48 cursor-pointer rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-200 overflow-hidden">
+            <div class="aspect-video relative overflow-hidden bg-muted">
+                ${thumbHtml}
+                ${playBtn}
+            </div>
+            <div class="p-2 space-y-1">
+                <h4 class="text-xs font-medium leading-none truncate" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
+                <div class="flex items-center gap-1">
+                    <span class="text-[9px] font-semibold text-primary bg-primary/10 px-1 py-0.5 rounded uppercase">${badge}</span>
+                    <span class="text-[10px] text-muted-foreground">${formatSize(f.size)}</span>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
 }
 
-function formatMimeBadge(mime) {
-    if (!mime) return 'file';
-    if (mime.includes('image')) return 'image';
-    if (mime.includes('pdf')) return 'pdf';
-    if (mime.includes('video')) return 'video';
-    if (mime.includes('audio')) return 'audio';
-    if (mime.includes('text') || mime.includes('json') || mime.includes('javascript')) return 'code';
-    if (mime.includes('zip') || mime.includes('tar') || mime.includes('compressed')) return 'archive';
-    return mime.split('/')[1] || 'file';
+function scrollRecent(section) {
+    const el = document.getElementById('recent-' + section);
+    if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
 }
 
-function getMimeIconSvg(mime) {
-    if (mime === 'inode/directory') {
-        return '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>';
-    }
-    if (mime && mime.startsWith('image/')) {
-        return '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
-    }
-    if (mime && mime.startsWith('video/')) {
-        return '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.777-.416L16 11"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>';
-    }
-    if (mime && mime.startsWith('audio/')) {
-        return '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
-    }
-    if (mime && mime.includes('pdf')) {
-        return '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M9 18v-6h3c1.1 0 2 .9 2 2v2c0 1.1-.9 2-2 2H9z"/><path d="M12 15h1"/></svg>';
-    }
-    if (mime && (mime.includes('zip') || mime.includes('tar') || mime.includes('compressed'))) {
-        return '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M4 20h16"/><path d="M6 8h12"/><rect width="16" height="12" x="4" y="8" rx="1"/><path d="M12 12v4"/><path d="M10 14h4"/></svg>';
-    }
-    if (mime && (mime.includes('text') || mime.includes('json') || mime.includes('javascript') || mime.includes('html') || mime.includes('css'))) {
-        return '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
-    }
-    return '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>';
-}
+window.openFileById = function(fileId) {
+    const file = allFiles.find(f => f.id === fileId);
+    if (file) openFile(file);
+};
 
 function openFile(file) {
-    if (file.mime_type && file.mime_type.startsWith('video/')) {
-        showFileViewerModal(file, 'video');
+    const cat = getCategoryFromMime(file.mime_type);
+    if (cat === 'video' || cat === 'image' || cat === 'document') {
+        showFileViewerModal(file, cat);
     } else {
         window.location.href = '/api/file/' + file.id;
     }
@@ -301,17 +442,36 @@ function showFileViewerModal(file, type) {
     const root = document.getElementById('file-viewer-root');
     if (!root) return;
 
+    const displayName = getCleanName(file.filename);
+    let contentHtml = '';
+    if (type === 'video') {
+        contentHtml = `<video controls autoplay preload="metadata" src="/api/file/${file.id}" class="w-full h-full object-contain"></video>`;
+    } else if (type === 'image') {
+        contentHtml = `<img src="/api/file/${file.id}" alt="${escapeHtml(file.filename)}" class="max-w-full max-h-full object-contain" />`;
+    } else if (type === 'document') {
+        contentHtml = `<iframe src="/api/file/${file.id}" class="w-full h-full border-0" style="min-height:70vh"></iframe>`;
+    }
+
     root.innerHTML = `
-      <div data-state="open" class="fixed inset-0 z-50 bg-black/80 animate-overlay-show" data-viewer-overlay></div>
-      <div data-state="open" class="fixed left-[50%] top-[50%] z-50 grid w-full max-w-3xl translate-x-[-50%] translate-y-[-50%] gap-4 border bg-popover p-6 shadow-lg duration-200 animate-content-show sm:rounded-lg" data-viewer-content>
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold leading-none tracking-tight text-popover-foreground truncate pr-4">${escapeHtml(file.filename)}</h2>
-          <button data-viewer-close class="inline-flex h-8 w-8 items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground shrink-0">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"></path></svg>
-          </button>
+      <div data-viewer-overlay class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md animate-overlay-show transition-opacity"></div>
+      <div data-viewer-content class="fixed inset-4 md:inset-8 lg:inset-16 z-50 flex flex-col animate-content-show">
+        <div class="flex items-center justify-between mb-4 px-2">
+          <div class="min-w-0 flex-1">
+            <h2 class="text-lg font-semibold text-white/90 truncate">${escapeHtml(displayName)}</h2>
+            <p class="text-sm text-white/50">${formatSize(file.size)} &middot; ${getTypeBadge(file.mime_type)}</p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0 ml-4">
+            <a href="/api/file/${file.id}" download class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors bg-white/10 text-white/90 hover:bg-white/20 h-9 px-4 backdrop-blur-sm">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              Download
+            </a>
+            <button data-viewer-close class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors bg-white/10 text-white/90 hover:bg-white/20 backdrop-blur-sm">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"></path></svg>
+            </button>
+          </div>
         </div>
-        <div class="flex items-center justify-center overflow-auto max-h-[70vh]">
-          <video controls preload="metadata" src="/api/file/${file.id}" class="w-full rounded-lg"></video>
+        <div class="flex-1 flex items-center justify-center overflow-hidden rounded-2xl bg-black/50 backdrop-blur-sm border border-white/10">
+          ${contentHtml}
         </div>
       </div>
     `;
@@ -319,13 +479,13 @@ function showFileViewerModal(file, type) {
     var overlay = root.querySelector('[data-viewer-overlay]');
     var content = root.querySelector('[data-viewer-content]');
     var closeBtn = root.querySelector('[data-viewer-close]');
-    var video = root.querySelector('video');
+    var media = root.querySelector('video, img, iframe');
 
     function cleanup() {
-        if (overlay) overlay.setAttribute('data-state', 'closed');
-        if (content) content.setAttribute('data-state', 'closed');
-        if (video) { video.pause(); video.removeAttribute('src'); video.load(); }
-        setTimeout(function() { root.innerHTML = ''; }, 150);
+        if (overlay) overlay.style.opacity = '0';
+        if (content) { content.style.opacity = '0'; content.style.transform = 'scale(0.95)'; }
+        if (media && media.tagName === 'VIDEO') { media.pause(); media.removeAttribute('src'); media.load(); }
+        setTimeout(function() { root.innerHTML = ''; }, 200);
         cleanupListeners();
     }
     function onKeydown(e) { if (e.key === 'Escape') { e.preventDefault(); cleanup(); } }
@@ -343,4 +503,16 @@ function showFileViewerModal(file, type) {
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function formatSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024, sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }

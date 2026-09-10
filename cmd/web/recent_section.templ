@@ -1,0 +1,26 @@
+package web
+
+import "github.com/bryanvaz/go-templ-lucide-icons"
+
+templ RecentSection() {
+	<section id="recent-section" class="space-y-4">
+		<div class="flex items-center justify-between">
+			<h2 class="text-lg font-semibold tracking-tight">Recently Played</h2>
+			<button onclick="scrollRecent('played')" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground h-8 w-8">
+				@icons.ChevronRight(templ.Attributes{"class": "h-4 w-4"})
+			</button>
+		</div>
+		<div id="recent-played" class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide"></div>
+		<div class="flex items-center justify-between mt-6">
+			<h2 class="text-lg font-semibold tracking-tight">Recently Uploaded</h2>
+			<button onclick="scrollRecent('uploaded')" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground h-8 w-8">
+				@icons.ChevronRight(templ.Attributes{"class": "h-4 w-4"})
+			</button>
+		</div>
+		<div id="recent-uploaded" class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide"></div>
+	</section>
+	<style>
+		.scrollbar-hide::-webkit-scrollbar { display: none; }
+		.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+	</style>
+}

@@ -1,0 +1,144 @@
+package files
+
+import (
+	"bytes"
+	"image"
+	"image/jpeg"
+	_ "image/png"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
+func getThumbPath(storagePath string) string {
+	return storagePath + ".thumb.jpg"
+}
+
+func GenerateThumbnail(storagePath, mimeType string) (string, error) {
+	thumbPath := getThumbPath(storagePath)
+
+	if _, err := os.Stat(thumbPath); err == nil {
+		return thumbPath, nil
+	}
+
+	mime := strings.ToLower(mimeType)
+	switch {
+	case strings.HasPrefix(mime, "video/"):
+		if err := generateVideoThumb(storagePath, thumbPath); err != nil {
+			return "", err
+		}
+		return thumbPath, nil
+	case strings.HasPrefix(mime, "image/"):
+		if err := generateImageThumb(storagePath, thumbPath); err != nil {
+			return "", err
+		}
+		return thumbPath, nil
+	default:
+		return "", ErrNoThumbnail
+	}
+}
+
+var ErrNoThumbnail = &ThumbError{"no thumbnail available"}
+
+type ThumbError struct {
+	msg string
+}
+
+func (e *ThumbError) Error() string {
+	return e.msg
+}
+
+func generateVideoThumb(inputPath, outputPath string) error {
+	args := []string{
+		"-i", inputPath,
+		"-vf", "select='eq(pict_type,I)',scale=320:-1",
+		"-frames:v", "1",
+		"-q:v", "3",
+		"-y",
+		outputPath,
+	}
+	cmd := exec.Command("ffmpeg", args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		args2 := []string{
+			"-i", inputPath,
+			"-ss", "00:00:01",
+			"-vf", "scale=320:-1",
+			"-frames:v", "1",
+			"-q:v", "3",
+			"-y",
+			outputPath,
+		}
+		cmd2 := exec.Command("ffmpeg", args2...)
+		cmd2.Stderr = &stderr
+		if err2 := cmd2.Run(); err2 != nil {
+			return err2
+		}
+	}
+	return nil
+}
+
+func generateImageThumb(inputPath, outputPath string) error {
+	f, err := os.Open(inputPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	img, _, err := image.Decode(f)
+	if err != nil {
+		return generateImageThumbFallback(inputPath, outputPath)
+	}
+
+	bounds := img.Bounds()
+	w := bounds.Dx()
+	h := bounds.Dy()
+	maxW := 320
+	if w > maxW {
+		ratio := float64(maxW) / float64(w)
+		h = int(float64(h) * ratio)
+		w = maxW
+	}
+
+	resized := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			srcX := bounds.Min.X + int(float64(x)*float64(bounds.Dx())/float64(w))
+			srcY := bounds.Min.Y + int(float64(y)*float64(bounds.Dy())/float64(h))
+			resized.Set(x, y, img.At(srcX, srcY))
+		}
+	}
+
+	out, err := os.Create(outputPath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	return jpeg.Encode(out, resized, &jpeg.Options{Quality: 80})
+}
+
+func generateImageThumbFallback(inputPath, outputPath string) error {
+	args := []string{
+		"-i", inputPath,
+		"-vf", "scale=320:-1",
+		"-frames:v", "1",
+		"-q:v", "3",
+		"-y",
+		outputPath,
+	}
+	cmd := exec.Command("ffmpeg", args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	return cmd.Run()
+}
+
+func getExtensionFromPath(path string) string {
+	ext := filepath.Ext(path)
+	if ext != "" {
+		return strings.ToLower(ext[1:])
+	}
+	return ""
+}

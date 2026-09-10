@@ -52,6 +52,7 @@ func (s *Server) RegisterUIRoutes(r chi.Router) {
 		gr.Use(middleware.UIAuthMiddleware(s.db))
 		gr.Get("/", templ.Handler(web.Home()).ServeHTTP)
 		gr.Get("/upload", templ.Handler(web.Upload()).ServeHTTP)
+		gr.Get("/settings", templ.Handler(web.Settings()).ServeHTTP)
 	})
 }
 

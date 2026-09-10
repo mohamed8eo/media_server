@@ -1,0 +1,167 @@
+package web
+
+import "github.com/bryanvaz/go-templ-lucide-icons"
+
+templ Settings() {
+	@AppShell("settings") {
+		<div class="mx-auto max-w-2xl space-y-8">
+			<div class="space-y-1">
+				<h1 class="text-2xl font-bold tracking-tight">Settings</h1>
+				<p class="text-sm text-muted-foreground">Manage your account and preferences</p>
+			</div>
+			<!-- Account Section -->
+			<div class="rounded-xl border bg-card text-card-foreground shadow-sm p-6 space-y-4">
+				<div class="flex items-center gap-3">
+					<div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+						@icons.User(templ.Attributes{"class": "h-5 w-5"})
+					</div>
+					<div>
+						<h3 class="text-sm font-semibold">Account</h3>
+						<p class="text-xs text-muted-foreground">Your account information</p>
+					</div>
+				</div>
+				<div class="space-y-3 pt-2" id="account-info">
+					<div class="flex items-center justify-between py-2 border-b border-border">
+						<span class="text-sm text-muted-foreground">Email</span>
+						<span class="text-sm font-medium" id="settings-email">Loading...</span>
+					</div>
+					<div class="flex items-center justify-between py-2 border-b border-border">
+						<span class="text-sm text-muted-foreground">Member since</span>
+						<span class="text-sm font-medium" id="settings-joined">Loading...</span>
+					</div>
+					<div class="flex items-center justify-between py-2">
+						<span class="text-sm text-muted-foreground">Storage used</span>
+						<span class="text-sm font-medium" id="settings-storage">Loading...</span>
+					</div>
+				</div>
+			</div>
+			<!-- Storage Section -->
+			<div class="rounded-xl border bg-card text-card-foreground shadow-sm p-6 space-y-4">
+				<div class="flex items-center gap-3">
+					<div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+						@icons.HardDrive(templ.Attributes{"class": "h-5 w-5"})
+					</div>
+					<div>
+						<h3 class="text-sm font-semibold">Storage</h3>
+						<p class="text-xs text-muted-foreground">File storage breakdown</p>
+					</div>
+				</div>
+				<div class="space-y-3 pt-2">
+					<div class="space-y-2">
+						<div class="flex items-center justify-between text-sm">
+							<span class="text-muted-foreground">Total files</span>
+							<span class="font-medium" id="settings-file-count">-</span>
+						</div>
+						<div class="flex items-center gap-2">
+							<div class="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+								<div id="storage-bar" class="h-full bg-primary rounded-full transition-all" style="width: 0%"></div>
+							</div>
+							<span class="text-xs text-muted-foreground tabular-nums" id="settings-storage-pct">0%</span>
+						</div>
+					</div>
+					<div class="grid grid-cols-2 gap-3 pt-2" id="category-stats">
+						<div class="flex items-center gap-2 rounded-lg border p-3">
+							@icons.Video(templ.Attributes{"class": "h-4 w-4 text-muted-foreground"})
+							<div>
+								<p class="text-xs text-muted-foreground">Videos</p>
+								<p class="text-sm font-medium" id="stat-videos">0</p>
+							</div>
+						</div>
+						<div class="flex items-center gap-2 rounded-lg border p-3">
+							@icons.Image(templ.Attributes{"class": "h-4 w-4 text-muted-foreground"})
+							<div>
+								<p class="text-xs text-muted-foreground">Images</p>
+								<p class="text-sm font-medium" id="stat-images">0</p>
+							</div>
+						</div>
+						<div class="flex items-center gap-2 rounded-lg border p-3">
+							@icons.FileText(templ.Attributes{"class": "h-4 w-4 text-muted-foreground"})
+							<div>
+								<p class="text-xs text-muted-foreground">Documents</p>
+								<p class="text-sm font-medium" id="stat-documents">0</p>
+							</div>
+						</div>
+						<div class="flex items-center gap-2 rounded-lg border p-3">
+							@icons.Music(templ.Attributes{"class": "h-4 w-4 text-muted-foreground"})
+							<div>
+								<p class="text-xs text-muted-foreground">Audio</p>
+								<p class="text-sm font-medium" id="stat-audio">0</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- Appearance Section -->
+			<div class="rounded-xl border bg-card text-card-foreground shadow-sm p-6 space-y-4">
+				<div class="flex items-center gap-3">
+					<div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+						@icons.Palette(templ.Attributes{"class": "h-5 w-5"})
+					</div>
+					<div>
+						<h3 class="text-sm font-semibold">Appearance</h3>
+						<p class="text-xs text-muted-foreground">Customize the look and feel</p>
+					</div>
+				</div>
+				<div class="space-y-3 pt-2">
+					<div class="flex items-center justify-between">
+						<div>
+							<p class="text-sm font-medium">Dark Mode</p>
+							<p class="text-xs text-muted-foreground">Toggle between light and dark themes</p>
+						</div>
+						<button onclick="toggleTheme()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4">
+							<span class="dark:hidden">Enable Dark</span>
+							<span class="hidden dark:inline">Enable Light</span>
+						</button>
+					</div>
+				</div>
+			</div>
+			<!-- Danger Zone -->
+			<div class="rounded-xl border border-destructive/50 bg-card text-card-foreground shadow-sm p-6 space-y-4">
+				<div class="flex items-center gap-3">
+					<div class="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+						@icons.LogOut(templ.Attributes{"class": "h-5 w-5"})
+					</div>
+					<div>
+						<h3 class="text-sm font-semibold">Session</h3>
+						<p class="text-xs text-muted-foreground">Sign out of your account</p>
+					</div>
+				</div>
+				<a href="/api/auth/logout" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors bg-destructive text-destructive-foreground shadow hover:bg-destructive/90 h-9 px-4">
+					@icons.LogOut(templ.Attributes{"class": "h-4 w-4"})
+					Sign Out
+				</a>
+			</div>
+		</div>
+		<script>
+			document.addEventListener('DOMContentLoaded', async () => {
+				try {
+					const meRes = await fetch('/api/me', { credentials: 'include' });
+					if (meRes.ok) {
+						const user = await meRes.json();
+						document.getElementById('settings-email').textContent = user.email || '-';
+						if (user.created_at) {
+							document.getElementById('settings-joined').textContent = new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+						}
+					}
+				} catch (e) {}
+				try {
+					const statsRes = await fetch('/api/file/stats', { credentials: 'include' });
+					if (statsRes.ok) {
+						const stats = await statsRes.json();
+						document.getElementById('settings-storage').textContent = stats.total_size_formatted || '0 B';
+						document.getElementById('settings-file-count').textContent = stats.file_count + ' files';
+						const cats = stats.categories || {};
+						document.getElementById('stat-videos').textContent = cats.video || 0;
+						document.getElementById('stat-images').textContent = cats.image || 0;
+						document.getElementById('stat-documents').textContent = cats.document || 0;
+						document.getElementById('stat-audio').textContent = cats.audio || 0;
+						const total = stats.file_count || 1;
+						const pct = Math.min(100, Math.round(((stats.total_size || 0) / (10 * 1024 * 1024 * 1024)) * 100));
+						document.getElementById('settings-storage-pct').textContent = pct + '% of 10 GB';
+						document.getElementById('storage-bar').style.width = pct + '%';
+					}
+				} catch (e) {}
+			});
+		</script>
+	}
+}

@@ -5,6 +5,7 @@ import (
 
 	"mediaserver/cmd/web"
 	"mediaserver/internal/auth"
+	"mediaserver/internal/files"
 	"mediaserver/internal/middleware"
 
 	"github.com/a-h/templ"
@@ -61,4 +62,11 @@ func (s *Server) RegisterAPIRoutes(r chi.Router) {
 	r.Get("/health", s.healthHandler)
 	r.Mount("/auth", auth.NewRouter(s.db))
 	r.Post("/hello", web.HelloWebHandler)
+
+	// Protected API routes (Returns 401 Unauthorized for API clients)
+	r.Group(func(gr chi.Router) {
+		gr.Use(middleware.AuthMiddleware)
+		gr.Mount("/file", files.NewRouter(s.db))
+		gr.Get("/me", s.MeHandler)
+	})
 }

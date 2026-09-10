@@ -22,10 +22,14 @@ type Service interface {
 	Close() error
 	CreateUser(email, passwordHash string) (uuid.UUID, error)
 	GetUserByEmail(email string) (*models.User, error)
+	GetUserByID(id uuid.UUID) (*models.User, error)
 	StoreRefreshToken(userID uuid.UUID, token string, expiresAt time.Time) (uuid.UUID, error)
 	GetRefreshToken(token string) (*models.RefreshToken, error)
 	RevokeRefreshToken(token string) error
 	RevokeAllUserRefreshTokens(userID uuid.UUID) error
+	CreateFile(id, userID uuid.UUID, filename, mimeType string, size int64, storagePath string) error
+	ListFilesByUser(userID uuid.UUID) ([]models.File, error)
+	GetFileByID(fileID uuid.UUID) (*models.File, error)
 }
 
 type service struct {
@@ -76,7 +80,20 @@ func migrate(db *sql.DB) error {
 		revoked BOOLEAN NOT NULL DEFAULT 0,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-	);`
+	);
+
+	CREATE TABLE IF NOT EXISTS files (
+		id TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL,
+		filename TEXT NOT NULL,
+		mime_type TEXT NOT NULL,
+		size INTEGER NOT NULL,
+		storage_path TEXT NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_files_user_id ON files(user_id);`
 	_, err := db.Exec(query)
 	return err
 }

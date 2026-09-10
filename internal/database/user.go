@@ -25,9 +25,27 @@ func (s *service) GetUserByEmail(email string) (*models.User, error) {
 	)
 
 	var u models.User
-	err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt)
+	var idStr string
+	err := row.Scan(&idStr, &u.Email, &u.PasswordHash, &u.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
+	u.ID, _ = uuid.Parse(idStr)
+	return &u, nil
+}
+
+func (s *service) GetUserByID(id uuid.UUID) (*models.User, error) {
+	row := s.db.QueryRow(
+		`SELECT id, email, password_hash, created_at FROM users WHERE id = ?`,
+		id.String(),
+	)
+
+	var u models.User
+	var idStr string
+	err := row.Scan(&idStr, &u.Email, &u.PasswordHash, &u.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	u.ID, _ = uuid.Parse(idStr)
 	return &u, nil
 }

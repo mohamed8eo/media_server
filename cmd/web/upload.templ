@@ -1,5 +1,7 @@
 package web
 
+import "github.com/bryanvaz/go-templ-lucide-icons"
+
 templ Upload() {
 	@AppShell("upload") {
 		<div class="mx-auto flex max-w-2xl flex-col gap-6">
@@ -21,7 +23,7 @@ templ Upload() {
 				<input type="file" id="file-input" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
 				<div class="flex flex-col items-center justify-center space-y-4 pointer-events-none">
 					<div class="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-						<svg class="h-8 w-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+						@icons.Upload(templ.Attributes{"class": "h-8 w-8 text-muted-foreground"})
 					</div>
 					<div class="space-y-1">
 						<p class="text-sm font-medium">Drag files here or <span class="text-primary underline underline-offset-4">browse</span></p>
@@ -46,7 +48,7 @@ templ Upload() {
 
 			<div class="flex justify-center">
 				<a href="/" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground h-9 px-4 py-2">
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+					@icons.ArrowLeft(templ.Attributes{"class": "h-4 w-4"})
 					Back to files
 				</a>
 			</div>

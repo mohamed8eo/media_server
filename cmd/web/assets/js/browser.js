@@ -388,13 +388,13 @@ function renderGridCard(f) {
         extraBadge = `<span class="inline-flex items-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase">${formatSize(f.size)}</span>`;
     }
 
-    return `<div data-file-id="${f.id}" class="group relative cursor-pointer rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-200 overflow-hidden flex flex-col">
-        <div class="aspect-video relative overflow-hidden bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center">
+    return `<div data-file-id="${f.id}" class="group relative cursor-pointer rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-200 flex flex-col">
+        <div class="aspect-video relative rounded-t-2xl overflow-hidden bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center">
             ${thumbHtml}
             <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-            <div class="absolute bottom-2 left-2 right-2 p-1 flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-200 bg-background/90 dark:bg-slate-900/90 backdrop-blur-md rounded-xl border border-border dark:border-slate-800 shadow-lg z-10">
-                ${actions}
-            </div>
+        </div>
+        <div class="absolute top-2 right-2 p-1.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-background/90 dark:bg-slate-900/90 backdrop-blur-md rounded-xl border border-border dark:border-slate-800 shadow-lg z-20">
+            ${actions}
         </div>
         <div class="p-3.5 space-y-2 flex-1 flex flex-col justify-between">
             <div class="space-y-1">
@@ -498,10 +498,10 @@ function getFileActions(f) {
     
     // More dropdown
     html += `<div data-dropdown-menu class="relative">
-        <button data-action="more" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="More options">
+        <button data-action="more" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
-        <div data-dropdown-content class="hidden absolute right-0 bottom-full mb-2 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-xl py-1.5 z-50 text-xs font-medium">
+        <div data-dropdown-content class="hidden absolute right-0 top-full mt-2 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-xl py-1.5 z-50 text-xs font-medium">
             <button data-action="info" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
             <button data-action="delete" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
         </div>
@@ -520,7 +520,7 @@ function getFileActionsInline(f) {
     html += `<button data-action="move" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8" title="Move to Folder"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" x2="12" y1="11" y2="17"/><line x1="9" x2="15" y1="14" y2="14"/></svg></button>`;
     
     html += `<div data-dropdown-menu class="relative">
-        <button data-action="more" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8" title="More options">
+        <button data-action="more" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
         <div data-dropdown-content class="hidden absolute right-0 top-full mt-2 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-xl py-1.5 z-50 text-xs font-medium">

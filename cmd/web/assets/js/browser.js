@@ -17,7 +17,11 @@ function initFileBrowser() {
 
     document.addEventListener('click', (e) => {
         if (!e.target.closest('[data-dropdown-menu]')) {
-            document.querySelectorAll('[data-dropdown-content]').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[data-dropdown-content]').forEach(el => {
+                el.classList.add('hidden');
+                const parentCard = el.closest('[data-file-id]') || el.closest('.folder-card') || el.closest('.group');
+                if (parentCard) parentCard.classList.remove('z-30', 'z-[100]', 'relative');
+            });
         }
     });
 }
@@ -340,6 +344,7 @@ function renderFiles() {
                     if (!card) return;
                     var action = e.target.closest('[data-action]');
                     if (action) {
+                        e.stopPropagation();
                         handleFileAction(action.dataset.action, card.dataset.fileId, e);
                         return;
                     }
@@ -358,6 +363,7 @@ function renderFiles() {
                     if (!row) return;
                     var action = e.target.closest('[data-action]');
                     if (action) {
+                        e.stopPropagation();
                         handleFileAction(action.dataset.action, row.dataset.fileId, e);
                         return;
                     }
@@ -388,7 +394,7 @@ function renderGridCard(f) {
         extraBadge = `<span class="inline-flex items-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase">${formatSize(f.size)}</span>`;
     }
 
-    return `<div data-file-id="${f.id}" class="group relative cursor-pointer rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-200 flex flex-col">
+    return `<div data-file-id="${f.id}" class="group relative cursor-pointer rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-200 flex flex-col w-full">
         <div class="aspect-video relative rounded-t-2xl overflow-hidden bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center">
             ${thumbHtml}
             <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
@@ -501,9 +507,9 @@ function getFileActions(f) {
         <button data-action="more" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
-        <div data-dropdown-content class="hidden absolute right-0 top-full mt-2 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-xl py-1.5 z-50 text-xs font-medium">
-            <button data-action="info" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
-            <button data-action="delete" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
+        <div data-dropdown-content class="hidden absolute right-0 top-full mt-2 w-48 rounded-xl bg-card border border-border dark:border-slate-800 shadow-xl z-50 p-1 text-xs font-medium">
+            <button data-action="info" class="w-full text-left px-3.5 py-2 rounded-lg hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
+            <button data-action="delete" class="w-full text-left px-3.5 py-2 rounded-lg text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
         </div>
     </div>`;
 
@@ -523,7 +529,7 @@ function getFileActionsInline(f) {
         <button data-action="more" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
-        <div data-dropdown-content class="hidden absolute right-0 top-full mt-2 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-xl py-1.5 z-50 text-xs font-medium">
+        <div data-dropdown-content class="hidden absolute right-0 top-full mt-1 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-2xl py-1.5 z-[100] text-xs font-medium">
             <button data-action="info" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
             <button data-action="delete" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
         </div>
@@ -535,13 +541,25 @@ function getFileActionsInline(f) {
 function handleFileAction(action, fileId, e) {
     if (action === 'more') {
         const container = e.target.closest('[data-dropdown-menu]');
+        const cardOrRow = e.target.closest('[data-file-id]') || e.target.closest('.folder-card');
         if (container) {
             const menu = container.querySelector('[data-dropdown-content]');
             if (menu) {
                 document.querySelectorAll('[data-dropdown-content]').forEach(el => {
-                    if (el !== menu) el.classList.add('hidden');
+                    if (el !== menu) {
+                        el.classList.add('hidden');
+                        const parentCard = el.closest('[data-file-id]') || el.closest('.folder-card');
+                        if (parentCard) parentCard.classList.remove('z-30', 'relative');
+                    }
                 });
-                menu.classList.toggle('hidden');
+                const isHidden = menu.classList.toggle('hidden');
+                if (cardOrRow) {
+                    if (!isHidden) {
+                        cardOrRow.classList.add('z-30', 'relative');
+                    } else {
+                        cardOrRow.classList.remove('z-30', 'relative');
+                    }
+                }
             }
         }
         e.stopPropagation();

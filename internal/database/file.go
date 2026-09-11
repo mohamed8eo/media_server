@@ -1,9 +1,12 @@
 package database
 
 import (
+	"context"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"mediaserver/internal/database/sqlc"
 	"mediaserver/internal/models"
 
 	"github.com/google/uuid"
@@ -26,144 +29,202 @@ func normalizeFolder(folder string) string {
 
 func (s *service) CreateFile(id, userID uuid.UUID, filename, mimeType string, size int64, folder string, storagePath string) error {
 	folder = normalizeFolder(folder)
-	_, err := s.db.Exec(
-		`INSERT INTO files (id, user_id, filename, mime_type, size, folder, storage_path) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		id.String(), userID.String(), filename, mimeType, size, folder, storagePath,
-	)
-	return err
+	ctx := context.Background()
+	return s.queries.CreateFile(ctx, sqlc.CreateFileParams{
+		ID:          id.String(),
+		UserID:      userID.String(),
+		Filename:    filename,
+		MimeType:    mimeType,
+		Size:        size,
+		Folder:      folder,
+		StoragePath: storagePath,
+	})
 }
 
 func (s *service) ListFilesByUser(userID uuid.UUID) ([]models.File, error) {
-	rows, err := s.db.Query(
-		`SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? ORDER BY created_at DESC`,
-		userID.String(),
-	)
+	ctx := context.Background()
+	dbFiles, err := s.queries.ListFilesByUser(ctx, userID.String())
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var files []models.File
-	for rows.Next() {
-		var f models.File
-		var idStr, userIDStr string
-		if err := rows.Scan(&idStr, &userIDStr, &f.Filename, &f.MimeType, &f.Size, &f.Folder, &f.StoragePath, &f.CreatedAt, &f.LastAccessed); err != nil {
-			return nil, err
+	for _, f := range dbFiles {
+		fid, _ := uuid.Parse(f.ID)
+		uid, _ := uuid.Parse(f.UserID)
+		var createdAt time.Time
+		if f.CreatedAt.Valid {
+			createdAt = f.CreatedAt.Time
 		}
-		f.ID, _ = uuid.Parse(idStr)
-		f.UserID, _ = uuid.Parse(userIDStr)
-		f.Folder = normalizeFolder(f.Folder)
-		files = append(files, f)
+		var lastAccessed *time.Time
+		if f.LastAccessed.Valid {
+			t := f.LastAccessed.Time
+			lastAccessed = &t
+		}
+
+		files = append(files, models.File{
+			ID:           fid,
+			UserID:       uid,
+			Filename:     f.Filename,
+			MimeType:     f.MimeType,
+			Size:         f.Size,
+			Folder:       normalizeFolder(f.Folder),
+			StoragePath:  f.StoragePath,
+			CreatedAt:    createdAt,
+			LastAccessed: lastAccessed,
+		})
 	}
-	return files, rows.Err()
+	return files, nil
 }
 
 func (s *service) GetFileByID(fileID uuid.UUID) (*models.File, error) {
-	row := s.db.QueryRow(
-		`SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE id = ?`,
-		fileID.String(),
-	)
-
-	var f models.File
-	var idStr, userIDStr string
-	if err := row.Scan(&idStr, &userIDStr, &f.Filename, &f.MimeType, &f.Size, &f.Folder, &f.StoragePath, &f.CreatedAt, &f.LastAccessed); err != nil {
+	ctx := context.Background()
+	f, err := s.queries.GetFileByID(ctx, fileID.String())
+	if err != nil {
 		return nil, err
 	}
-	f.ID, _ = uuid.Parse(idStr)
-	f.UserID, _ = uuid.Parse(userIDStr)
-	f.Folder = normalizeFolder(f.Folder)
-	return &f, nil
+
+	fid, _ := uuid.Parse(f.ID)
+	uid, _ := uuid.Parse(f.UserID)
+	var createdAt time.Time
+	if f.CreatedAt.Valid {
+		createdAt = f.CreatedAt.Time
+	}
+	var lastAccessed *time.Time
+	if f.LastAccessed.Valid {
+		t := f.LastAccessed.Time
+		lastAccessed = &t
+	}
+
+	return &models.File{
+		ID:           fid,
+		UserID:       uid,
+		Filename:     f.Filename,
+		MimeType:     f.MimeType,
+		Size:         f.Size,
+		Folder:       normalizeFolder(f.Folder),
+		StoragePath:  f.StoragePath,
+		CreatedAt:    createdAt,
+		LastAccessed: lastAccessed,
+	}, nil
 }
 
 func (s *service) UpdateLastAccessed(fileID uuid.UUID) error {
-	_, err := s.db.Exec(
-		`UPDATE files SET last_accessed = CURRENT_TIMESTAMP WHERE id = ?`,
-		fileID.String(),
-	)
-	return err
+	ctx := context.Background()
+	return s.queries.UpdateLastAccessed(ctx, fileID.String())
 }
 
 func (s *service) ListRecentUploads(userID uuid.UUID, limit int) ([]models.File, error) {
 	if limit <= 0 {
 		limit = 10
 	}
-	rows, err := s.db.Query(
-		`SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
-		userID.String(), limit,
-	)
+	ctx := context.Background()
+	dbFiles, err := s.queries.ListRecentUploads(ctx, sqlc.ListRecentUploadsParams{
+		UserID: userID.String(),
+		Limit:  int64(limit),
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var files []models.File
-	for rows.Next() {
-		var f models.File
-		var idStr, userIDStr string
-		if err := rows.Scan(&idStr, &userIDStr, &f.Filename, &f.MimeType, &f.Size, &f.Folder, &f.StoragePath, &f.CreatedAt, &f.LastAccessed); err != nil {
-			return nil, err
+	for _, f := range dbFiles {
+		fid, _ := uuid.Parse(f.ID)
+		uid, _ := uuid.Parse(f.UserID)
+		var createdAt time.Time
+		if f.CreatedAt.Valid {
+			createdAt = f.CreatedAt.Time
 		}
-		f.ID, _ = uuid.Parse(idStr)
-		f.UserID, _ = uuid.Parse(userIDStr)
-		f.Folder = normalizeFolder(f.Folder)
-		files = append(files, f)
+		var lastAccessed *time.Time
+		if f.LastAccessed.Valid {
+			t := f.LastAccessed.Time
+			lastAccessed = &t
+		}
+
+		files = append(files, models.File{
+			ID:           fid,
+			UserID:       uid,
+			Filename:     f.Filename,
+			MimeType:     f.MimeType,
+			Size:         f.Size,
+			Folder:       normalizeFolder(f.Folder),
+			StoragePath:  f.StoragePath,
+			CreatedAt:    createdAt,
+			LastAccessed: lastAccessed,
+		})
 	}
-	return files, rows.Err()
+	return files, nil
 }
 
 func (s *service) ListRecentlyPlayed(userID uuid.UUID, limit int) ([]models.File, error) {
 	if limit <= 0 {
 		limit = 10
 	}
-	rows, err := s.db.Query(
-		`SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? AND last_accessed IS NOT NULL ORDER BY last_accessed DESC LIMIT ?`,
-		userID.String(), limit,
-	)
+	ctx := context.Background()
+	dbFiles, err := s.queries.ListRecentlyPlayed(ctx, sqlc.ListRecentlyPlayedParams{
+		UserID: userID.String(),
+		Limit:  int64(limit),
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var files []models.File
-	for rows.Next() {
-		var f models.File
-		var idStr, userIDStr string
-		if err := rows.Scan(&idStr, &userIDStr, &f.Filename, &f.MimeType, &f.Size, &f.Folder, &f.StoragePath, &f.CreatedAt, &f.LastAccessed); err != nil {
-			return nil, err
+	for _, f := range dbFiles {
+		fid, _ := uuid.Parse(f.ID)
+		uid, _ := uuid.Parse(f.UserID)
+		var createdAt time.Time
+		if f.CreatedAt.Valid {
+			createdAt = f.CreatedAt.Time
 		}
-		f.ID, _ = uuid.Parse(idStr)
-		f.UserID, _ = uuid.Parse(userIDStr)
-		f.Folder = normalizeFolder(f.Folder)
-		files = append(files, f)
+		var lastAccessed *time.Time
+		if f.LastAccessed.Valid {
+			t := f.LastAccessed.Time
+			lastAccessed = &t
+		}
+
+		files = append(files, models.File{
+			ID:           fid,
+			UserID:       uid,
+			Filename:     f.Filename,
+			MimeType:     f.MimeType,
+			Size:         f.Size,
+			Folder:       normalizeFolder(f.Folder),
+			StoragePath:  f.StoragePath,
+			CreatedAt:    createdAt,
+			LastAccessed: lastAccessed,
+		})
 	}
-	return files, rows.Err()
+	return files, nil
 }
 
 func (s *service) GetUserStorageUsage(userID uuid.UUID) (int64, error) {
-	var total int64
-	err := s.db.QueryRow(
-		`SELECT COALESCE(SUM(size), 0) FROM files WHERE user_id = ?`,
-		userID.String(),
-	).Scan(&total)
-	return total, err
+	ctx := context.Background()
+	val, err := s.queries.GetUserStorageUsage(ctx, userID.String())
+	if err != nil {
+		return 0, err
+	}
+	switch v := val.(type) {
+	case int64:
+		return v, nil
+	case int:
+		return int64(v), nil
+	case float64:
+		return int64(v), nil
+	default:
+		return 0, nil
+	}
 }
 
 func (s *service) GetUserFileCountByCategory(userID uuid.UUID) (map[string]int, error) {
-	rows, err := s.db.Query(
-		`SELECT mime_type FROM files WHERE user_id = ?`,
-		userID.String(),
-	)
+	ctx := context.Background()
+	mimes, err := s.queries.ListMimeTypesByUser(ctx, userID.String())
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	counts := make(map[string]int)
-	for rows.Next() {
-		var mimeType string
-		if err := rows.Scan(&mimeType); err != nil {
-			return nil, err
-		}
+	for _, mimeType := range mimes {
 		mime := strings.ToLower(mimeType)
 		switch {
 		case strings.HasPrefix(mime, "video/"):
@@ -178,21 +239,27 @@ func (s *service) GetUserFileCountByCategory(userID uuid.UUID) (map[string]int, 
 			counts["other"]++
 		}
 	}
-	return counts, rows.Err()
+	return counts, nil
 }
 
 func (s *service) DeleteFile(fileID uuid.UUID) error {
-	_, err := s.db.Exec(`DELETE FROM files WHERE id = ?`, fileID.String())
-	return err
+	ctx := context.Background()
+	return s.queries.DeleteFile(ctx, fileID.String())
 }
 
 func (s *service) UpdateFilename(fileID uuid.UUID, filename string) error {
-	_, err := s.db.Exec(`UPDATE files SET filename = ? WHERE id = ?`, filename, fileID.String())
-	return err
+	ctx := context.Background()
+	return s.queries.UpdateFilename(ctx, sqlc.UpdateFilenameParams{
+		Filename: filename,
+		ID:       fileID.String(),
+	})
 }
 
 func (s *service) UpdateFileFolder(fileID uuid.UUID, folder string) error {
 	folder = normalizeFolder(folder)
-	_, err := s.db.Exec(`UPDATE files SET folder = ? WHERE id = ?`, folder, fileID.String())
-	return err
+	ctx := context.Background()
+	return s.queries.UpdateFileFolder(ctx, sqlc.UpdateFileFolderParams{
+		Folder: folder,
+		ID:     fileID.String(),
+	})
 }

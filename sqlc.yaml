@@ -1,0 +1,10 @@
+version: "2"
+sql:
+  - schema: "internal/database/migrations"
+    queries: "db/query"
+    engine: "sqlite"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/database/sqlc"
+        sql_package: "database/sql"

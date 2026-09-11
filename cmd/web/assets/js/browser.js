@@ -534,13 +534,17 @@ function getFileActionsInline(f) {
 
 function handleFileAction(action, fileId, e) {
     if (action === 'more') {
-        const menu = e.currentTarget.nextElementSibling;
-        if (menu) {
-            document.querySelectorAll('[data-dropdown-content]').forEach(el => {
-                if (el !== menu) el.classList.add('hidden');
-            });
-            menu.classList.toggle('hidden');
+        const container = e.target.closest('[data-dropdown-menu]');
+        if (container) {
+            const menu = container.querySelector('[data-dropdown-content]');
+            if (menu) {
+                document.querySelectorAll('[data-dropdown-content]').forEach(el => {
+                    if (el !== menu) el.classList.add('hidden');
+                });
+                menu.classList.toggle('hidden');
+            }
         }
+        e.stopPropagation();
         return;
     }
 

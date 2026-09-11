@@ -657,7 +657,8 @@ async function showMovePrompt(file) {
 }
 
 async function showDeleteConfirm(file) {
-    if (!confirm(`Are you sure you want to delete "${file.filename}"?`)) return;
+    const confirmed = await showConfirmModal('Delete File', `Are you sure you want to delete "${file.filename}"?`);
+    if (!confirmed) return;
     try {
         const res = await fetch(`/api/file/${file.id}`, {
             method: 'DELETE',
@@ -670,6 +671,35 @@ async function showDeleteConfirm(file) {
     } catch (err) {
         showToast('Failed to delete file');
     }
+}
+
+function showConfirmModal(title, message) {
+    return new Promise(resolve => {
+        const dialog = document.createElement('div');
+        dialog.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in';
+        dialog.innerHTML = `
+            <div class="bg-card border border-border dark:border-slate-800 rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 space-y-4 animate-in zoom-in-95">
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">${title}</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400">${escapeHtml(message)}</p>
+                <div class="flex justify-end gap-2.5 pt-2">
+                    <button id="confirm-cancel" class="inline-flex items-center justify-center rounded-xl text-sm font-medium border border-input bg-background h-9 px-4 hover:bg-accent">Cancel</button>
+                    <button id="confirm-ok" class="inline-flex items-center justify-center rounded-xl text-sm font-medium bg-destructive text-destructive-foreground shadow h-9 px-4 hover:bg-destructive/90">Delete</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(dialog);
+        const cancelBtn = dialog.querySelector('#confirm-cancel');
+        const okBtn = dialog.querySelector('#confirm-ok');
+
+        function done(val) {
+            dialog.remove();
+            resolve(val);
+        }
+
+        cancelBtn.onclick = () => done(false);
+        okBtn.onclick = () => done(true);
+        dialog.onclick = (e) => { if (e.target === dialog) done(false); };
+    });
 }
 
 function showPromptModal(title, initialValue) {

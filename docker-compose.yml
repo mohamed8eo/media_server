@@ -13,5 +13,6 @@ services:
       BLUEPRINT_DB_URL: ${BLUEPRINT_DB_URL}
     volumes:
       - sqlite_bp:/app/db
+      - ./storage:/app/storage
 volumes:
   sqlite_bp:

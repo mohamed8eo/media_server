@@ -18,10 +18,14 @@ templ FileCard() {
 				<button data-action="move" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="Move to Folder">
 					@icons.FolderInput(templ.Attributes{"class": "h-3.5 w-3.5"})
 				</button>
-				<div class="relative group/menu">
+				<div class="relative group/menu" data-dropdown-menu>
 					<button data-action="more" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="More">
 						@icons.MoreVertical(templ.Attributes{"class": "h-3.5 w-3.5"})
 					</button>
+					<div data-dropdown-content class="hidden absolute right-0 bottom-full mb-2 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-xl py-1.5 z-50 text-xs font-medium">
+						<button data-action="info" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
+						<button data-action="delete" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
+					</div>
 				</div>
 			</div>
 		</div>

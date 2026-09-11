@@ -502,10 +502,8 @@ function getFileActions(f) {
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
         <div data-dropdown-content class="hidden absolute right-0 bottom-full mb-2 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-xl py-1.5 z-50 text-xs font-medium">
-            <button data-action="rename" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">Rename</button>
-            <button data-action="share" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">Share link</button>
-            <div class="h-px bg-border my-1"></div>
-            <button data-action="delete" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete</button>
+            <button data-action="info" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
+            <button data-action="delete" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
         </div>
     </div>`;
 
@@ -526,10 +524,8 @@ function getFileActionsInline(f) {
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
         <div data-dropdown-content class="hidden absolute right-0 top-full mt-2 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-xl py-1.5 z-50 text-xs font-medium">
-            <button data-action="rename" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">Rename</button>
-            <button data-action="share" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">Share link</button>
-            <div class="h-px bg-border my-1"></div>
-            <button data-action="delete" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete</button>
+            <button data-action="info" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
+            <button data-action="delete" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
         </div>
     </div>`;
 
@@ -564,9 +560,58 @@ function handleFileAction(action, fileId, e) {
         showRenamePrompt(file);
     } else if (action === 'move') {
         showMovePrompt(file);
+    } else if (action === 'info') {
+        showFileInfoModal(file);
     } else if (action === 'delete') {
         showDeleteConfirm(file);
     }
+}
+
+function showFileInfoModal(file) {
+    const dialog = document.createElement('div');
+    dialog.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in';
+    dialog.innerHTML = `
+        <div class="bg-card border border-border dark:border-slate-800 rounded-2xl p-6 shadow-2xl max-w-md w-full mx-4 space-y-4 animate-in zoom-in-95">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">File Information</h3>
+                <button id="info-close" class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="space-y-3 text-sm text-slate-700 dark:text-slate-300">
+                <div class="flex justify-between py-1 border-b border-border/60">
+                    <span class="font-medium text-slate-500">Filename</span>
+                    <span class="truncate max-w-[240px]" title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-border/60">
+                    <span class="font-medium text-slate-500">Size</span>
+                    <span>${formatSize(file.size)}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-border/60">
+                    <span class="font-medium text-slate-500">Type</span>
+                    <span>${escapeHtml(file.mime_type)}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-border/60">
+                    <span class="font-medium text-slate-500">Folder</span>
+                    <span>${escapeHtml(file.folder)}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-border/60">
+                    <span class="font-medium text-slate-500">Uploaded</span>
+                    <span>${formatDate(file.created_at)}</span>
+                </div>
+            </div>
+            <div class="flex justify-end pt-2">
+                <button id="info-ok" class="inline-flex items-center justify-center rounded-xl text-sm font-medium bg-primary text-primary-foreground shadow h-9 px-4 hover:bg-primary/90">Close</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(dialog);
+    const closeBtn = dialog.querySelector('#info-close');
+    const okBtn = dialog.querySelector('#info-ok');
+    function close() { dialog.remove(); }
+    closeBtn.onclick = close;
+    okBtn.onclick = close;
+    dialog.onclick = (e) => { if (e.target === dialog) close(); };
 }
 
 async function showRenamePrompt(file) {

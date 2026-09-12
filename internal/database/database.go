@@ -30,6 +30,7 @@ type Service interface {
 	CreateUser(email, passwordHash string) (uuid.UUID, error)
 	GetUserByEmail(email string) (*models.User, error)
 	GetUserByID(id uuid.UUID) (*models.User, error)
+	UpdatePasswordByEmail(email, passwordHash string) error
 	StoreRefreshToken(userID uuid.UUID, token string, expiresAt time.Time) (uuid.UUID, error)
 	GetRefreshToken(token string) (*models.RefreshToken, error)
 	RevokeRefreshToken(token string) error

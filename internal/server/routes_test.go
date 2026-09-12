@@ -90,3 +90,33 @@ func TestWatchRouteRequiresAuthentication(t *testing.T) {
 		t.Errorf("expected sign-in redirect, got %q", location)
 	}
 }
+
+func TestLogoutHandlerRedirectsToSignIn(t *testing.T) {
+	os.Setenv("JWT_SECRET", "logout-test-secret")
+	os.Setenv("BLUEPRINT_DB_URL", "file:logout_test?mode=memory&cache=shared")
+	database.Reset()
+
+	s := &Server{db: database.New()}
+	handler := s.RegisterRoutes()
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := client.Get(server.URL + "/api/auth/logout")
+	if err != nil {
+		t.Fatalf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusSeeOther {
+		t.Errorf("expected status 303 See Other, got %d", resp.StatusCode)
+	}
+	if location := resp.Header.Get("Location"); location != "/sign-in" {
+		t.Errorf("expected redirect to /sign-in, got %q", location)
+	}
+}

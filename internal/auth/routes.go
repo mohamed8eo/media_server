@@ -44,6 +44,7 @@ func NewRouter(db database.Service) http.Handler {
 	r.Post("/register", h.RegisterHandler)
 	r.Post("/login", h.LoginHandler)
 	r.Post("/refresh", h.RefreshHandler)
+	r.Post("/reset-password", h.ResetPasswordHandler)
 	r.Get("/logout", h.LogoutHandler)
 
 	return r
@@ -260,7 +261,65 @@ func (h *AuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
+	if strings.Contains(r.Header.Get("Accept"), "application/json") {
+		utils.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
+		return
+	}
+
+	http.Redirect(w, r, "/sign-in", http.StatusSeeOther)
+}
+
+func (h *AuthHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	var req ResetPasswordRequest
+
+	if err := decodeRequest(r, &req); err != nil {
+		h.errorResponse(w, r, http.StatusBadRequest, "Bad Request")
+		return
+	}
+
+	if err := h.validator.Struct(req); err != nil {
+		h.errorResponse(w, r, http.StatusBadRequest, "Invalid email or password requirements")
+		return
+	}
+
+	user, err := h.db.GetUserByEmail(req.Email)
+	if err != nil {
+		h.errorResponse(w, r, http.StatusNotFound, "User not found with this email")
+		return
+	}
+
+	hash, err := HashPassword(req.Password)
+	if err != nil {
+		h.errorResponse(w, r, http.StatusInternalServerError, "Failed to hash password")
+		return
+	}
+
+	if err := h.db.UpdatePasswordByEmail(req.Email, hash); err != nil {
+		h.errorResponse(w, r, http.StatusInternalServerError, "Failed to update password")
+		return
+	}
+
+	_ = h.db.RevokeAllUserRefreshTokens(user.ID)
+
+	slog.Info("auth.password.reset", "email", user.Email, "user_id", user.ID, "ip", r.RemoteAddr)
+
+	if isHTMX(r) {
+		w.Header().Set("HX-Redirect", "/sign-in")
+		w.WriteHeader(http.StatusOK)
+
+		_, _ = w.Write([]byte(`
+			<div class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-medium flex items-center space-x-2">
+				<svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+				</svg>
+				<span>Password reset successfully! Redirecting to sign in...</span>
+			</div>
+		`))
+
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Password reset successfully"})
 }
 
 func decodeRequest(r *http.Request, dst any) error {
@@ -285,6 +344,10 @@ func decodeRequest(r *http.Request, dst any) error {
 
 	case *RefreshRequest:
 		v.RefreshToken = r.FormValue("refresh_token")
+
+	case *ResetPasswordRequest:
+		v.Email = r.FormValue("email")
+		v.Password = r.FormValue("password")
 
 	default:
 		return errors.New("unsupported request type")

@@ -36,6 +36,8 @@ api
 # User file storage
 storage/
 
+# Docker deployment data managed by the mediaserver CLI
+data/
+
 # OS X generated file
 .DS_Store
-

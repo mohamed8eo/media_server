@@ -65,3 +65,11 @@ func (s *service) GetUserByID(id uuid.UUID) (*models.User, error) {
 		CreatedAt:    createdAt,
 	}, nil
 }
+
+func (s *service) UpdatePasswordByEmail(email, passwordHash string) error {
+	ctx := context.Background()
+	return s.queries.UpdatePasswordByEmail(ctx, sqlc.UpdatePasswordByEmailParams{
+		PasswordHash: passwordHash,
+		Email:        email,
+	})
+}

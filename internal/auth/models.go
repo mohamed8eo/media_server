@@ -22,3 +22,8 @@ type AuthResponse struct {
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token,omitempty"`
 }
+
+type ResetPasswordRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8,max=72,strongpassword"`
+}

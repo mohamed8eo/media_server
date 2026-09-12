@@ -6,14 +6,12 @@ services:
       target: prod
     restart: unless-stopped
     ports:
-      - ${PORT}:${PORT}
+      - ${PORT:-8080}:${PORT:-8080}
     environment:
-      APP_ENV: ${APP_ENV}
-      PORT: ${PORT}
-      BLUEPRINT_DB_URL: ${BLUEPRINT_DB_URL}
+      APP_ENV: ${APP_ENV:-local}
+      PORT: ${PORT:-8080}
+      BLUEPRINT_DB_URL: file:/app/db/mediaserver.db
+      STORAGE_PATH: /app/storage
     volumes:
-      - sqlite_bp:/app/db
-      - storage_data:/app/storage
-volumes:
-  sqlite_bp:
-  storage_data:
+      - ${DATA_DIR:-./data}/db:/app/db
+      - ${DATA_DIR:-./data}/storage:/app/storage

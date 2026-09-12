@@ -30,8 +30,12 @@ CREATE TABLE IF NOT EXISTS files (
 );
 
 CREATE INDEX IF NOT EXISTS idx_files_user_id ON files(user_id);
+CREATE INDEX IF NOT EXISTS idx_files_user_created ON files(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_files_user_accessed ON files(user_id, last_accessed DESC);
 
 -- +goose Down
+DROP INDEX IF EXISTS idx_files_user_accessed;
+DROP INDEX IF EXISTS idx_files_user_created;
 DROP INDEX IF EXISTS idx_files_user_id;
 DROP TABLE IF EXISTS files;
 DROP TABLE IF EXISTS refresh_tokens;

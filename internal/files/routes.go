@@ -136,6 +136,16 @@ func (h *FileHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to save file record")
 		return
 	}
+
+	if strings.HasPrefix(mimeType, "video/") {
+		err := h.fixAudioIfNeeded(fileID, destPath)
+		if err != nil {
+			utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	w.Header().Set("HX-Trigger", "mediaUpdated")
 	utils.RespondWithJSON(w, http.StatusCreated, map[string]string{
 		"id":       fileID.String(),
 		"filename": header.Filename,
@@ -240,6 +250,7 @@ func (h *FileHandler) MkdirHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("HX-Trigger", "mediaUpdated")
 	utils.RespondWithJSON(w, http.StatusCreated, map[string]string{
 		"path": "/" + cleaned,
 	})
@@ -365,7 +376,7 @@ func (h *FileHandler) ThumbnailHandler(w http.ResponseWriter, r *http.Request) {
 	defer f.Close()
 
 	w.Header().Set("Content-Type", "image/jpeg")
-	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	http.ServeContent(w, r, "thumb.jpg", file.CreatedAt, f)
 }
 

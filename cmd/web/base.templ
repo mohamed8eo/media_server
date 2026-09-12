@@ -154,6 +154,14 @@ templ Base() {
 					--input: 217 19% 22%;
 					--ring: 215 20.2% 65.1%;
 				}
+				.htmx-swapping {
+					opacity: 0;
+					transition: opacity 150ms ease-out;
+				}
+				.htmx-settling {
+					opacity: 1;
+					transition: opacity 150ms ease-in;
+				}
 			</style>
 			<script>
 				const origWarn = console.warn;
@@ -204,6 +212,7 @@ templ Base() {
 						if (typeof showToast === 'function') {
 							showToast(`Successfully uploaded ${successCount} file${successCount > 1 ? 's' : ''}`);
 						}
+						document.body.dispatchEvent(new CustomEvent('mediaUpdated'));
 						if (typeof fetchFiles === 'function') {
 							fetchFiles();
 						} else {

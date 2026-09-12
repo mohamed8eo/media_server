@@ -4,11 +4,16 @@ let currentView = localStorage.getItem('file_view') || 'grid';
 let currentFilter = new URLSearchParams(window.location.search).get('type') || 'all';
 let currentFolder = new URLSearchParams(window.location.search).get('folder') || '/';
 
+document.addEventListener('mediaUpdated', () => {
+    if (typeof fetchFiles === 'function') {
+        fetchFiles();
+    }
+});
+
 function initFileBrowser() {
     setFileView(currentView, false);
     setFilter(currentFilter, false);
     fetchFiles();
-    fetchRecent();
 
     const searchInput = document.getElementById('file-search');
     if (searchInput) searchInput.addEventListener('input', () => renderFiles());
@@ -42,6 +47,7 @@ async function createNewFolder() {
         const data = await res.json();
         if (!allFolders.includes(data.path)) allFolders.push(data.path);
         renderAll();
+        document.body.dispatchEvent(new CustomEvent('mediaUpdated'));
         showToast('Folder created successfully');
     } catch (e) {
         showToast('Failed to create folder');
@@ -225,26 +231,14 @@ function setFilter(filter, updateUrl = true) {
         window.history.replaceState({}, '', qs ? '?' + qs : '/');
     }
     updateActiveFilterTab();
-    if (typeof updateSidebarActive === 'function') updateSidebarActive();
+    if (typeof updateNavActive === 'function') updateNavActive();
     renderFiles();
 }
 
 function updateActiveFilterTab() {
-    const tabs = document.querySelectorAll('[data-filter]');
-    tabs.forEach(tab => {
-        if (tab.dataset.filter === currentFilter) {
-            tab.className = 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm';
-        } else {
-            tab.className = 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100';
-        }
-    });
     const titles = { all: 'All Media', video: 'Videos', image: 'Images', document: 'Documents', audio: 'Audio' };
     const titleEl = document.getElementById('section-title');
     if (titleEl) titleEl.textContent = titles[currentFilter] || 'All Media';
-    const recentSection = document.getElementById('recent-section');
-    if (recentSection) {
-        recentSection.classList.toggle('hidden', currentFilter && currentFilter !== 'all');
-    }
 }
 
 function renderFiles() {
@@ -394,12 +388,22 @@ function renderGridCard(f) {
         extraBadge = `<span class="inline-flex items-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase">${formatSize(f.size)}</span>`;
     }
 
-    return `<div data-file-id="${f.id}" class="group relative cursor-pointer rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-200 flex flex-col w-full">
+    return `<div data-file-id="${f.id}" 
+        x-data="{ showActions: false, menuOpen: false }"
+        @mouseenter="showActions = true"
+        @mouseleave="if (!menuOpen) showActions = false"
+        class="relative group rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-200 flex flex-col w-full cursor-pointer"
+        :class="menuOpen ? 'z-50 relative' : 'z-10 relative'">
         <div class="aspect-video relative rounded-t-2xl overflow-hidden bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center">
             ${thumbHtml}
             <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
         </div>
-        <div class="absolute top-2 right-2 p-1.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-background/90 dark:bg-slate-900/90 backdrop-blur-md rounded-xl border border-border dark:border-slate-800 shadow-lg z-20">
+        <div 
+            x-show="showActions || menuOpen"
+            x-transition:enter="transition ease-out duration-150"
+            x-transition:enter-start="opacity-0 translate-y-1"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            class="absolute top-2 right-2 p-1 flex items-center gap-1 bg-background/90 dark:bg-slate-900/90 backdrop-blur-md rounded-xl border border-border dark:border-slate-800 shadow-lg z-25 max-w-[calc(100%-1rem)] overflow-x-auto scrollbar-none">
             ${actions}
         </div>
         <div class="p-3.5 space-y-2 flex-1 flex flex-col justify-between">
@@ -423,7 +427,12 @@ function renderListRow(f) {
     const displayName = getCleanName(f.filename);
     const actions = getFileActionsInline(f);
 
-    return `<div data-file-id="${f.id}" class="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors border-b border-border dark:border-slate-800/60 last:border-0">
+    return `<div data-file-id="${f.id}" 
+        x-data="{ showActions: false, menuOpen: false }"
+        @mouseenter="showActions = true"
+        @mouseleave="if (!menuOpen) showActions = false"
+        class="relative group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors border-b border-border dark:border-slate-800/60 last:border-0"
+        :class="menuOpen ? 'z-50 relative' : 'z-0 relative'">
         <div class="w-11 h-11 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900/60 shrink-0 flex items-center justify-center border border-border dark:border-slate-800">
             ${thumbHtml}
         </div>
@@ -434,7 +443,12 @@ function renderListRow(f) {
             </div>
             <p class="text-xs text-slate-500 dark:text-slate-400 truncate tabular-nums">${formatSize(f.size)} <span class="hidden sm:inline">&middot; ${formatDate(f.created_at)}</span></p>
         </div>
-        <div class="flex items-center gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+        <div 
+            x-show="showActions || menuOpen"
+            x-transition:enter="transition ease-out duration-150"
+            x-transition:enter-start="opacity-0 translate-y-1"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            class="flex items-center gap-1.5 shrink-0 z-25">
             ${actions}
         </div>
     </div>`;
@@ -497,19 +511,19 @@ function getFileActions(f) {
     const cat = getCategoryFromMime(f.mime_type);
     let html = '';
     if (cat === 'video' || cat === 'image' || cat === 'document') {
-        html += `<button data-action="play" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="Play / Preview"><svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>`;
+        html += `<button data-action="play" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors"><svg class="h-4 w-4 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>`;
     }
-    html += `<button data-action="download" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="Download"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
-    html += `<button data-action="move" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="Move to Folder"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" x2="12" y1="11" y2="17"/><line x1="9" x2="15" y1="14" y2="14"/></svg></button>`;
+    html += `<button data-action="download" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors"><svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
+    html += `<button data-action="move" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors"><svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" x2="12" y1="11" y2="17"/><line x1="9" x2="15" y1="14" y2="14"/></svg></button>`;
     
     // More dropdown
     html += `<div data-dropdown-menu class="relative">
-        <button data-action="more" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        <button data-action="more" @click="menuOpen = !menuOpen" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors">
+            <svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
-        <div data-dropdown-content class="hidden absolute right-0 top-full mt-2 w-48 rounded-xl bg-card border border-border dark:border-slate-800 shadow-xl z-50 p-1 text-xs font-medium">
-            <button data-action="info" class="w-full text-left px-3.5 py-2 rounded-lg hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
-            <button data-action="delete" class="w-full text-left px-3.5 py-2 rounded-lg text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
+        <div x-show="menuOpen" @click.outside="menuOpen = false; showActions = false" x-transition class="absolute right-0 bottom-full mb-2 sm:bottom-auto sm:top-full sm:mt-2 w-48 rounded-xl bg-card border border-border dark:border-slate-800 shadow-2xl z-[100] p-1 text-xs font-medium">
+            <button data-action="info" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 rounded-lg hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
+            <button data-action="delete" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 rounded-lg text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
         </div>
     </div>`;
 
@@ -520,18 +534,18 @@ function getFileActionsInline(f) {
     const cat = getCategoryFromMime(f.mime_type);
     let html = '';
     if (cat === 'video' || cat === 'image' || cat === 'document') {
-        html += `<button data-action="play" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8" title="Play / Preview"><svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>`;
+        html += `<button data-action="play" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8"><svg class="h-4 w-4 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>`;
     }
-    html += `<button data-action="download" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8" title="Download"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
-    html += `<button data-action="move" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8" title="Move to Folder"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" x2="12" y1="11" y2="17"/><line x1="9" x2="15" y1="14" y2="14"/></svg></button>`;
+    html += `<button data-action="download" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8"><svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
+    html += `<button data-action="move" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8"><svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" x2="12" y1="11" y2="17"/><line x1="9" x2="15" y1="14" y2="14"/></svg></button>`;
     
     html += `<div data-dropdown-menu class="relative">
-        <button data-action="more" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        <button data-action="more" @click="menuOpen = !menuOpen" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8">
+            <svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
-        <div data-dropdown-content class="hidden absolute right-0 top-full mt-1 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-2xl py-1.5 z-[100] text-xs font-medium">
-            <button data-action="info" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
-            <button data-action="delete" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
+        <div x-show="menuOpen" @click.outside="menuOpen = false; showActions = false" x-transition class="absolute right-0 bottom-full mb-2 sm:bottom-auto sm:top-full sm:mt-1 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-2xl py-1.5 z-[100] text-xs font-medium">
+            <button data-action="info" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
+            <button data-action="delete" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
         </div>
     </div>`;
 
@@ -540,28 +554,6 @@ function getFileActionsInline(f) {
 
 function handleFileAction(action, fileId, e) {
     if (action === 'more') {
-        const container = e.target.closest('[data-dropdown-menu]');
-        const cardOrRow = e.target.closest('[data-file-id]') || e.target.closest('.folder-card');
-        if (container) {
-            const menu = container.querySelector('[data-dropdown-content]');
-            if (menu) {
-                document.querySelectorAll('[data-dropdown-content]').forEach(el => {
-                    if (el !== menu) {
-                        el.classList.add('hidden');
-                        const parentCard = el.closest('[data-file-id]') || el.closest('.folder-card');
-                        if (parentCard) parentCard.classList.remove('z-30', 'relative');
-                    }
-                });
-                const isHidden = menu.classList.toggle('hidden');
-                if (cardOrRow) {
-                    if (!isHidden) {
-                        cardOrRow.classList.add('z-30', 'relative');
-                    } else {
-                        cardOrRow.classList.remove('z-30', 'relative');
-                    }
-                }
-            }
-        }
         e.stopPropagation();
         return;
     }
@@ -847,59 +839,6 @@ async function fetchFiles() {
         console.error(err);
         if (loadingEl) loadingEl.innerHTML = '<p class="text-sm text-destructive font-medium">Failed to load files. Please refresh.</p>';
     }
-}
-
-async function fetchRecent() {
-    try {
-        const res = await fetch('/api/file/recent?limit=10', { method: 'GET', credentials: 'include' });
-        if (!res.ok) return;
-        const data = await res.json();
-        renderRecentSection('recent-played', data.recently_played || []);
-        renderRecentSection('recent-uploaded', data.recent_uploads || []);
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-function renderRecentSection(containerId, files) {
-    const el = document.getElementById(containerId);
-    if (!el) return;
-    if (files.length === 0) {
-        el.classList.add('hidden');
-        const heading = el.previousElementSibling;
-        if (heading && heading.tagName === 'DIV') heading.classList.add('hidden');
-        return;
-    }
-    el.classList.remove('hidden');
-    const heading = el.previousElementSibling;
-    if (heading && heading.tagName === 'DIV') heading.classList.remove('hidden');
-    el.innerHTML = files.map(f => {
-        const cat = getCategoryFromMime(f.mime_type);
-        const displayName = getCleanName(f.filename);
-        const badge = getTypeBadge(f.mime_type);
-        const thumbHtml = cat === 'image' || cat === 'video'
-            ? `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="w-full h-full items-center justify-center bg-muted hidden">${getFallbackIcon(f.mime_type)}</div>`
-            : `<div class="w-full h-full flex items-center justify-center bg-muted">${getFallbackIcon(f.mime_type)}</div>`;
-        const playBtn = cat === 'video' ? '<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><div class="flex h-10 w-10 items-center justify-center rounded-full bg-black/60 backdrop-blur-md shadow-lg text-white"><svg class="h-5 w-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>' : '';
-        return `<div onclick="openFileById('${f.id}')" class="group relative flex-shrink-0 w-48 cursor-pointer rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-200 overflow-hidden">
-            <div class="aspect-video relative overflow-hidden bg-slate-100 dark:bg-slate-900/60">
-                ${thumbHtml}
-                ${playBtn}
-            </div>
-            <div class="p-3 space-y-1">
-                <h4 class="text-xs font-semibold leading-snug truncate text-slate-900 dark:text-slate-100" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
-                <div class="flex items-center gap-1.5">
-                    <span class="text-[9px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/20 px-1.5 py-0.5 rounded uppercase">${badge}</span>
-                    <span class="text-[10px] text-slate-500 dark:text-slate-400 tabular-nums">${formatSize(f.size)}</span>
-                </div>
-            </div>
-        </div>`;
-    }).join('');
-}
-
-function scrollRecent(section) {
-    const el = document.getElementById('recent-' + section);
-    if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
 }
 
 window.openFileById = function(fileId) {

@@ -35,7 +35,10 @@ func (s *Server) RegisterRoutes() http.Handler {
 func (s *Server) RegisterUIRoutes(r chi.Router) {
 	// Static assets
 	fileServer := http.FileServer(http.FS(web.Files))
-	r.Handle("/assets/*", fileServer)
+	r.Handle("/assets/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		fileServer.ServeHTTP(w, r)
+	}))
 
 	// Guest-only UI pages (Redirects authenticated users away)
 	r.Group(func(gr chi.Router) {
@@ -44,13 +47,10 @@ func (s *Server) RegisterUIRoutes(r chi.Router) {
 		gr.Get("/sign-in", templ.Handler(web.SignIn()).ServeHTTP)
 	})
 
-	// Public UI pages
-	r.Get("/web", templ.Handler(web.HelloForm()).ServeHTTP)
-
 	// Protected UI pages (Redirects unauthenticated users to /sign-in)
 	r.Group(func(gr chi.Router) {
 		gr.Use(middleware.UIAuthMiddleware(s.db))
-		gr.Get("/", templ.Handler(web.Home()).ServeHTTP)
+		gr.Get("/", s.HomeHandler)
 		gr.Get("/upload", templ.Handler(web.Upload()).ServeHTTP)
 		gr.Get("/settings", templ.Handler(web.Settings()).ServeHTTP)
 	})
@@ -60,7 +60,6 @@ func (s *Server) RegisterAPIRoutes(r chi.Router) {
 	r.Get("/", s.HelloWorldHandler)
 	r.Get("/health", s.healthHandler)
 	r.Mount("/auth", auth.NewRouter(s.db))
-	r.Post("/hello", web.HelloWebHandler)
 
 	// Protected API routes (Returns 401 Unauthorized for API clients)
 	r.Group(func(gr chi.Router) {

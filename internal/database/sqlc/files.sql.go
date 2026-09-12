@@ -288,6 +288,22 @@ func (q *Queries) UpdateFileFolder(ctx context.Context, arg UpdateFileFolderPara
 	return err
 }
 
+const updateFileSize = `-- name: UpdateFileSize :exec
+UPDATE files
+    SET size = ?
+    WHERE id = ?
+`
+
+type UpdateFileSizeParams struct {
+	Size int64
+	ID   string
+}
+
+func (q *Queries) UpdateFileSize(ctx context.Context, arg UpdateFileSizeParams) error {
+	_, err := q.db.ExecContext(ctx, updateFileSize, arg.Size, arg.ID)
+	return err
+}
+
 const updateFilename = `-- name: UpdateFilename :exec
 UPDATE files SET filename = ? WHERE id = ?
 `

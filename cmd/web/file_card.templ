@@ -9,21 +9,21 @@ templ FileCard() {
 			<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
 		</div>
 		<!-- Floating Action Bar on Hover -->
-		<div class="absolute top-2 right-2 p-1.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-background/90 dark:bg-slate-900/90 backdrop-blur-md rounded-xl border border-border dark:border-slate-800 shadow-lg z-30">
-			<button data-action="play" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="Play / Preview">
-				@icons.Play(templ.Attributes{"class": "h-3.5 w-3.5"})
+		<div class="absolute top-2 right-2 p-1.5 flex items-center gap-1.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 bg-background/90 dark:bg-slate-900/90 backdrop-blur-md rounded-xl border border-border dark:border-slate-800 shadow-lg z-30">
+			<button data-action="play" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors">
+				@icons.Play(templ.Attributes{"class": "h-3.5 w-3.5 pointer-events-none"})
 			</button>
-			<button data-action="download" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="Download">
-				@icons.Download(templ.Attributes{"class": "h-3.5 w-3.5"})
+			<button data-action="download" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors">
+				@icons.Download(templ.Attributes{"class": "h-3.5 w-3.5 pointer-events-none"})
 			</button>
-			<button data-action="move" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="Move to Folder">
-				@icons.FolderInput(templ.Attributes{"class": "h-3.5 w-3.5"})
+			<button data-action="move" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors">
+				@icons.FolderInput(templ.Attributes{"class": "h-3.5 w-3.5 pointer-events-none"})
 			</button>
 			<div class="relative group/menu" data-dropdown-menu>
-				<button data-action="more" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors" title="More">
-					@icons.MoreVertical(templ.Attributes{"class": "h-3.5 w-3.5"})
+				<button data-action="more" class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors">
+					@icons.MoreVertical(templ.Attributes{"class": "h-3.5 w-3.5 pointer-events-none"})
 				</button>
-				<div data-dropdown-content class="hidden absolute right-0 top-full mt-2 w-48 rounded-xl bg-card border border-border dark:border-slate-800 shadow-xl z-50 p-1 text-xs font-medium">
+				<div data-dropdown-content class="hidden absolute right-0 top-full mt-2 w-48 rounded-xl bg-card border border-border dark:border-slate-800 shadow-2xl z-[100] p-1 text-xs font-medium">
 					<button data-action="info" class="w-full text-left px-3.5 py-2 rounded-lg hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
 					<button data-action="delete" class="w-full text-left px-3.5 py-2 rounded-lg text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
 				</div>

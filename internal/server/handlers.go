@@ -2,14 +2,24 @@ package server
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 
+	"mediaserver/cmd/web"
 	"mediaserver/internal/middleware"
 	"mediaserver/internal/utils"
 
+	"github.com/a-h/templ"
 	"github.com/google/uuid"
 )
+
+func (s *Server) HomeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("HX-Request") != "" {
+		templ.Handler(web.HomeContent()).ServeHTTP(w, r)
+		return
+	}
+	templ.Handler(web.Home()).ServeHTTP(w, r)
+}
 
 func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	resp := make(map[string]string)
@@ -17,7 +27,9 @@ func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonResp, err := json.Marshal(resp)
 	if err != nil {
-		log.Fatalf("error handling JSON marshal. Err: %v", err)
+		slog.Error("error handling JSON marshal", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
 	_, _ = w.Write(jsonResp)

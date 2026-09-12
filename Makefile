@@ -54,6 +54,21 @@ clean:
 	@echo "Cleaning..."
 	@rm -f main
 
+# SQLC generate
+sqlc:
+	@echo "Running sqlc generate..."
+	@sqlc generate
+
+# Goose migrations
+goose-up:
+	@goose -dir internal/database/migrations sqlite3 ./db/test.db up
+
+goose-down:
+	@goose -dir internal/database/migrations sqlite3 ./db/test.db down
+
+goose-status:
+	@goose -dir internal/database/migrations sqlite3 ./db/test.db status
+
 # Live Reload
 watch:
 	@if command -v air > /dev/null; then \
@@ -71,4 +86,4 @@ watch:
             fi; \
         fi
 
-.PHONY: all build run test clean watch templ-install
+.PHONY: all build run test clean watch templ-install sqlc goose-up goose-down goose-status

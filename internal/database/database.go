@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
@@ -44,6 +44,7 @@ type Service interface {
 	DeleteFile(fileID uuid.UUID) error
 	UpdateFilename(fileID uuid.UUID, filename string) error
 	UpdateFileFolder(fileID uuid.UUID, folder string) error
+	UpdateFileSize(fileID uuid.UUID, size int64) error
 }
 
 type service struct {
@@ -61,21 +62,25 @@ func New() Service {
 
 	dburl := os.Getenv("BLUEPRINT_DB_URL")
 	if dburl == "" {
-		log.Fatal("BLUEPRINT_DB_URL is required; refusing to open an ephemeral SQLite database")
+		slog.Error("BLUEPRINT_DB_URL is required; refusing to open an ephemeral SQLite database")
+		os.Exit(1)
 	}
 
 	db, err := sql.Open("sqlite3", dburl)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to open database", "error", err)
+		os.Exit(1)
 	}
 
 	goose.SetBaseFS(embedMigrations)
 	if err := goose.SetDialect("sqlite3"); err != nil {
-		log.Fatal(err)
+		slog.Error("failed to set goose dialect", "error", err)
+		os.Exit(1)
 	}
 
 	if err := goose.Up(db, "migrations"); err != nil {
-		log.Fatalf("failed to run goose migrations: %v", err)
+		slog.Error("failed to run goose migrations", "error", err)
+		os.Exit(1)
 	}
 
 	dbInstance = &service{
@@ -116,6 +121,6 @@ func (s *service) Health() map[string]string {
 
 // Close closes the database connection.
 func (s *service) Close() error {
-	log.Printf("Disconnected from database: %s", os.Getenv("BLUEPRINT_DB_URL"))
+	slog.Info("Disconnected from database", "url", os.Getenv("BLUEPRINT_DB_URL"))
 	return s.db.Close()
 }

@@ -4,103 +4,101 @@ import "github.com/bryanvaz/go-templ-lucide-icons"
 
 templ AppShell(currentPage string) {
 	@Base() {
-		<div x-data="{ mobileOpen: false }" class="flex min-h-screen bg-background text-slate-900 dark:text-slate-100">
-			<!-- Mobile drawer backdrop -->
-			<div 
-				x-show="mobileOpen" 
-				x-transition.opacity 
-				@click="mobileOpen = false" 
-				class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden"
-				style="display: none;"
-			></div>
-
-			<!-- Mobile slide-out drawer -->
-			<div 
-				x-show="mobileOpen" 
-				x-transition:enter="transition ease-out duration-250 transform"
-				x-transition:enter-start="-translate-x-full"
-				x-transition:enter-end="translate-x-0"
-				x-transition:leave="transition ease-in duration-200 transform"
-				x-transition:leave-start="translate-x-0"
-				x-transition:leave-end="-translate-x-full"
-				class="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r bg-card border-border dark:bg-[#0d1322] dark:border-slate-800/80 lg:hidden shadow-2xl"
-				style="display: none;"
-			>
-				<div class="flex h-14 items-center justify-between border-b px-5 border-border dark:border-slate-800/80">
-					<div class="flex items-center gap-2.5">
+		<div class="flex flex-col min-h-screen bg-background text-slate-900 dark:text-slate-100">
+			<!-- Top Navigation Bar -->
+			<header class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 sm:px-6">
+				<!-- Left: Logo + Desktop Category Navigation Pills -->
+				<div class="flex items-center gap-6">
+					<a href="/" class="flex items-center gap-2.5">
 						<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
 							@icons.Play(templ.Attributes{"class": "h-4 w-4"})
 						</div>
 						<span class="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">MediaVault</span>
-					</div>
-					<button @click="mobileOpen = false" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-background dark:bg-slate-900 shadow-sm hover:bg-accent h-8 w-8 text-slate-700 dark:text-slate-200">
-						@icons.X(templ.Attributes{"class": "h-4 w-4"})
-					</button>
-				</div>
-				<!-- Mobile nav links -->
-				<nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1.5" id="mobile-sidebar-nav">
-					<a href="/" @click="mobileOpen = false" data-nav="all" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100">
-						@icons.Library(templ.Attributes{"class": "h-4 w-4"})
-						All Media
 					</a>
-					<a href="/?type=video" @click="mobileOpen = false" data-nav="video" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100">
-						@icons.Video(templ.Attributes{"class": "h-4 w-4"})
-						Videos
-					</a>
-					<a href="/?type=image" @click="mobileOpen = false" data-nav="image" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100">
-						@icons.Image(templ.Attributes{"class": "h-4 w-4"})
-						Images
-					</a>
-					<a href="/?type=document" @click="mobileOpen = false" data-nav="document" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100">
-						@icons.FileText(templ.Attributes{"class": "h-4 w-4"})
-						Documents
-					</a>
-					<a href="/upload" @click="mobileOpen = false" data-nav="upload" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100">
-						@icons.Upload(templ.Attributes{"class": "h-4 w-4"})
-						Upload
-					</a>
-				</nav>
-				<div class="border-t px-3 py-4 space-y-1 border-border dark:border-slate-800/80">
-					<a href="/settings" @click="mobileOpen = false" data-nav="settings" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100">
-						@icons.Settings(templ.Attributes{"class": "h-4 w-4"})
-						Settings
-					</a>
-				</div>
-			</div>
-
-			<!-- Desktop Sidebar -->
-			<div class="hidden lg:block lg:w-64 lg:shrink-0">
-				@Sidebar(currentPage)
-			</div>
-
-			<div class="flex flex-1 flex-col min-w-0">
-				<!-- Top bar -->
-				<header class="sticky top-0 z-40 flex h-14 items-center justify-between px-4 sm:px-6 border-b border-border dark:border-slate-800/80 bg-card/80 dark:bg-[#0d1322]/80 backdrop-blur-md">
-					<div class="flex items-center gap-3">
-						<button @click="mobileOpen = true" class="inline-flex lg:hidden items-center justify-center rounded-md text-sm font-medium transition-colors border border-input dark:border-slate-700 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 h-9 w-9 cursor-pointer" title="Open menu">
-							@icons.Menu(templ.Attributes{"class": "h-4 w-4"})
-						</button>
-						<div class="flex items-center gap-2.5 lg:hidden">
-							<div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-								@icons.Play(templ.Attributes{"class": "h-3.5 w-3.5"})
-							</div>
-							<span class="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">MediaVault</span>
-						</div>
-					</div>
-					<div class="flex items-center gap-2">
-						<button onclick="toggleTheme()" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input dark:border-slate-700 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 h-9 w-9 cursor-pointer" title="Toggle theme">
-							@icons.Moon(templ.Attributes{"class": "h-4 w-4 block dark:hidden", "stroke": "currentColor", "stroke-width": "2", "fill": "none"})
-							@icons.Sun(templ.Attributes{"class": "h-4 w-4 hidden dark:block", "stroke": "currentColor", "stroke-width": "2", "fill": "none"})
-						</button>
-						<a href="/api/auth/logout" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input dark:border-slate-700 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 h-9 w-9 cursor-pointer" title="Sign out">
-							@icons.LogOut(templ.Attributes{"class": "h-4 w-4", "stroke": "currentColor", "stroke-width": "2", "fill": "none"})
+					<nav class="hidden lg:flex items-center border border-border dark:border-slate-800 rounded-xl p-1 bg-muted/50 h-10" id="top-nav">
+						<a href="/" hx-get="/" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="all" class="inline-flex items-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100">
+							@icons.Layers(templ.Attributes{"class": "h-4 w-4"})
+							All
 						</a>
+						<a href="/?type=video" hx-get="/?type=video" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="video" class="inline-flex items-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100">
+							@icons.Video(templ.Attributes{"class": "h-4 w-4"})
+							Videos
+						</a>
+						<a href="/?type=image" hx-get="/?type=image" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="image" class="inline-flex items-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100">
+							@icons.Image(templ.Attributes{"class": "h-4 w-4"})
+							Images
+						</a>
+						<a href="/?type=document" hx-get="/?type=document" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="document" class="inline-flex items-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100">
+							@icons.FileText(templ.Attributes{"class": "h-4 w-4"})
+							Docs
+						</a>
+					</nav>
+				</div>
+
+				<!-- Center-Right: Search Input Box -->
+				<div class="hidden md:flex items-center flex-1 max-w-sm mx-4">
+					<div class="relative w-full">
+						@icons.Search(templ.Attributes{"class": "absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"})
+						<input
+							type="text"
+							id="file-search"
+							placeholder="Search files & folders..."
+							class="flex h-10 w-full rounded-xl border border-input dark:border-slate-800 bg-background dark:bg-slate-900/60 pl-10 pr-4 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+						/>
 					</div>
-				</header>
-				<main class="flex-1 p-4 sm:p-6 md:p-8 space-y-6">
-					{ children... }
-				</main>
-			</div>
+				</div>
+
+				<!-- Far Right: Action Controls -->
+				<div class="flex items-center gap-2.5">
+					<button onclick="createNewFolder()" class="hidden sm:inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors border border-input dark:border-slate-800 bg-background dark:bg-slate-900/60 shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3.5 cursor-pointer" title="New Folder">
+						@icons.FolderPlus(templ.Attributes{"class": "h-4 w-4"})
+						<span>New Folder</span>
+					</button>
+					<a href="/upload" data-nav="upload" class="hidden sm:inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-3.5 cursor-pointer" title="Upload">
+						@icons.Upload(templ.Attributes{"class": "h-4 w-4"})
+						<span>Upload</span>
+					</a>
+					<button onclick="toggleTheme()" class="inline-flex items-center justify-center rounded-xl text-sm font-medium transition-colors border border-input dark:border-slate-800 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 h-9 w-9 cursor-pointer" title="Toggle theme">
+						@icons.Moon(templ.Attributes{"class": "h-4 w-4 block dark:hidden", "stroke": "currentColor", "stroke-width": "2", "fill": "none"})
+						@icons.Sun(templ.Attributes{"class": "h-4 w-4 hidden dark:block", "stroke": "currentColor", "stroke-width": "2", "fill": "none"})
+					</button>
+					<a href="/settings" data-nav="settings" class="inline-flex items-center justify-center rounded-xl text-sm font-medium transition-colors border border-input dark:border-slate-800 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 h-9 w-9 cursor-pointer" title="Settings">
+						@icons.Settings(templ.Attributes{"class": "h-4 w-4", "stroke": "currentColor", "stroke-width": "2", "fill": "none"})
+					</a>
+					<a href="/api/auth/logout" class="inline-flex items-center justify-center rounded-xl text-sm font-medium transition-colors border border-input dark:border-slate-800 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 h-9 w-9 cursor-pointer" title="Sign out">
+						@icons.LogOut(templ.Attributes{"class": "h-4 w-4", "stroke": "currentColor", "stroke-width": "2", "fill": "none"})
+					</a>
+				</div>
+			</header>
+
+			<!-- Main Content Wrapper -->
+			<main id="main-content" hx-on::after-swap="if(typeof initFileBrowser === 'function') initFileBrowser(); if(typeof setupDropOverlay === 'function') setupDropOverlay(); if(typeof updateNavActive === 'function') updateNavActive();" class="flex-1 w-full min-h-screen ml-0 pl-0 p-4 sm:p-6 md:p-8 pb-20 md:pb-6 space-y-6">
+				{ children... }
+			</main>
+
+			<!-- Mobile Bottom Navigation Bar -->
+			<nav class="fixed bottom-0 inset-x-0 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 z-40 flex items-center justify-around md:hidden" id="mobile-bottom-nav">
+				<a href="/" hx-get="/" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="all" class="flex flex-col items-center justify-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors w-12 h-full">
+					@icons.LayoutGrid(templ.Attributes{"class": "h-5 w-5"})
+					<span>All</span>
+				</a>
+				<a href="/?type=video" hx-get="/?type=video" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="video" class="flex flex-col items-center justify-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors w-12 h-full">
+					@icons.Video(templ.Attributes{"class": "h-5 w-5"})
+					<span>Videos</span>
+				</a>
+				<a href="/?type=image" hx-get="/?type=image" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="image" class="flex flex-col items-center justify-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors w-12 h-full">
+					@icons.Image(templ.Attributes{"class": "h-5 w-5"})
+					<span>Images</span>
+				</a>
+				<a href="/?type=document" hx-get="/?type=document" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="document" class="flex flex-col items-center justify-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors w-12 h-full">
+					@icons.FileText(templ.Attributes{"class": "h-5 w-5"})
+					<span>Docs</span>
+				</a>
+				<a href="/upload" data-nav="upload" class="flex flex-col items-center justify-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors w-12 h-full">
+					@icons.Upload(templ.Attributes{"class": "h-5 w-5"})
+					<span>Upload</span>
+				</a>
+			</nav>
 		</div>
 		<script>
 			function toggleTheme() {
@@ -112,6 +110,36 @@ templ AppShell(currentPage string) {
 					localStorage.theme = 'dark';
 				}
 			}
+
+			function updateNavActive() {
+				const params = new URLSearchParams(window.location.search);
+				const type = params.get('type');
+				const path = window.location.pathname;
+				let active = 'all';
+				if (path === '/upload') active = 'upload';
+				else if (path === '/settings') active = 'settings';
+				else if (type === 'video') active = 'video';
+				else if (type === 'image') active = 'image';
+				else if (type === 'document') active = 'document';
+
+				document.querySelectorAll('#top-nav a[data-nav]').forEach(link => {
+					if (link.dataset.nav === active) {
+						link.className = 'inline-flex items-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8 bg-background dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm';
+					} else {
+						link.className = 'inline-flex items-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100';
+					}
+				});
+
+				document.querySelectorAll('#mobile-bottom-nav a[data-nav]').forEach(link => {
+					if (link.dataset.nav === active) {
+						link.className = 'flex flex-col items-center justify-center gap-1 text-xs font-semibold text-primary dark:text-primary-foreground transition-colors w-12 h-full';
+					} else {
+						link.className = 'flex flex-col items-center justify-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors w-12 h-full';
+					}
+				});
+			}
+			updateNavActive();
+			window.addEventListener('popstate', updateNavActive);
 		</script>
 	}
 }

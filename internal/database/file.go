@@ -263,3 +263,11 @@ func (s *service) UpdateFileFolder(fileID uuid.UUID, folder string) error {
 		ID:     fileID.String(),
 	})
 }
+
+func (s *service) UpdateFileSize(fileID uuid.UUID, size int64) error {
+	ctx := context.Background()
+	return s.queries.UpdateFileSize(ctx, sqlc.UpdateFileSizeParams{
+		Size: size,
+		ID:   fileID.String(),
+	})
+}

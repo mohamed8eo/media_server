@@ -119,6 +119,7 @@ function uploadFile(file, itemId) {
         if (xhr.status >= 200 && xhr.status < 300) {
             if (statusEl) { statusEl.className = 'text-xs font-medium text-emerald-600 dark:text-emerald-400'; statusEl.textContent = 'Done'; }
             if (progressEl) progressEl.className = 'h-full rounded-full bg-emerald-500 transition-all duration-300';
+            document.body.dispatchEvent(new CustomEvent('mediaUpdated'));
         } else if (xhr.status === 401) {
             window.location.href = '/sign-in'; return;
         } else {

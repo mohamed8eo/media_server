@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"mediaserver/internal/database"
+	"mediaserver/internal/files"
 	"mediaserver/internal/server"
 )
 
@@ -42,13 +44,16 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 
-	server := server.NewServer()
+	db := database.New()
+	server := server.NewServer(db)
 
 	// Create a done channel to signal when the shutdown is complete
 	done := make(chan bool, 1)
 
 	// Run graceful shutdown in a separate goroutine
 	go gracefulShutdown(server, done)
+
+	go files.ResumePendingJobs(db, os.Getenv("STORAGE_PATH"))
 
 	slog.Info("Starting HTTP server", "addr", server.Addr)
 	err := server.ListenAndServe()

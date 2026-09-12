@@ -291,11 +291,16 @@ func (h *FileHandler) GetFileHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf(`attachment; filename="%s"`, file.Filename),
 		)
 	}
+	info, err := f.Stat()
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to read file info")
+		return
+	}
 	http.ServeContent(
 		w,
 		r,
 		file.Filename,
-		file.CreatedAt,
+		info.ModTime(),
 		f,
 	)
 }
@@ -499,7 +504,12 @@ func (h *FileHandler) ThumbnailHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "image/jpeg")
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	http.ServeContent(w, r, "thumb.jpg", file.CreatedAt, f)
+	info, err := f.Stat()
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to read file info")
+		return
+	}
+	http.ServeContent(w, r, "thumb.jpg", info.ModTime(), f)
 }
 
 type RecentResponse struct {

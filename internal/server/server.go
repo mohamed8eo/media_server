@@ -19,12 +19,18 @@ type Server struct {
 	db database.Service
 }
 
-func NewServer() *http.Server {
+func NewServer(dbArgs ...database.Service) *http.Server {
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
+	var db database.Service
+	if len(dbArgs) > 0 && dbArgs[0] != nil {
+		db = dbArgs[0]
+	} else {
+		db = database.New()
+	}
 	NewServer := &Server{
 		port: port,
 
-		db: database.New(),
+		db: db,
 	}
 	go func() {
 		files.PurgeExpired(NewServer.db, os.Getenv("STORAGE_PATH"))
@@ -34,8 +40,6 @@ func NewServer() *http.Server {
 			files.PurgeExpired(NewServer.db, os.Getenv("STORAGE_PATH"))
 		}
 	}()
-
-	files.ResumePendingJobs(NewServer.db, os.Getenv("STORAGE_PATH"))
 
 	// Declare Server config
 	server := &http.Server{

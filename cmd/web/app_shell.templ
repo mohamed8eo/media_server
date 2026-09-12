@@ -118,6 +118,7 @@ templ AppShell(currentPage string) {
 				let active = 'all';
 				if (path === '/upload') active = 'upload';
 				else if (path === '/settings') active = 'settings';
+				else if (path.startsWith('/watch/')) active = 'video';
 				else if (type === 'video') active = 'video';
 				else if (type === 'image') active = 'image';
 				else if (type === 'document') active = 'document';

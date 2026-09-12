@@ -848,7 +848,9 @@ window.openFileById = function(fileId) {
 
 function openFile(file) {
     const cat = getCategoryFromMime(file.mime_type);
-    if (cat === 'video' || cat === 'image' || cat === 'document') {
+    if (cat === 'video') {
+        window.location.href = '/watch/' + encodeURIComponent(file.id);
+    } else if (cat === 'image' || cat === 'document') {
         showFileViewerModal(file, cat);
     } else {
         window.location.href = '/api/file/' + file.id;

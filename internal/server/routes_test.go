@@ -1,13 +1,18 @@
 package server
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"mediaserver/internal/database"
+	"mediaserver/internal/middleware"
+
+	"github.com/google/uuid"
 )
 
 func TestHandler(t *testing.T) {
@@ -52,5 +57,36 @@ func TestAuthMiddlewareUnauthorized(t *testing.T) {
 
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("expected status 401 Unauthorized; got %v", resp.StatusCode)
+	}
+}
+
+func TestWatchHandlerRejectsMalformedID(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodGet, "/watch/not-a-uuid", nil)
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, uuid.New())
+	res := httptest.NewRecorder()
+
+	s.WatchHandler(res, req.WithContext(ctx))
+
+	if res.Code != http.StatusNotFound {
+		t.Errorf("expected malformed watch ID to return 404, got %d", res.Code)
+	}
+	if body := res.Body.String(); !strings.Contains(body, "Video unavailable") {
+		t.Errorf("expected unavailable page, got %q", body)
+	}
+}
+
+func TestWatchRouteRequiresAuthentication(t *testing.T) {
+	s := &Server{}
+	res := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/watch/8cf9f1bc-4db1-4b08-b4c7-9a9d772b8819", nil)
+
+	s.RegisterRoutes().ServeHTTP(res, req)
+
+	if res.Code != http.StatusSeeOther {
+		t.Errorf("expected unauthenticated watch route to redirect, got %d", res.Code)
+	}
+	if location := res.Header().Get("Location"); location != "/sign-in" {
+		t.Errorf("expected sign-in redirect, got %q", location)
 	}
 }

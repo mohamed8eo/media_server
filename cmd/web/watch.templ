@@ -1,0 +1,56 @@
+package web
+
+import (
+	"mediaserver/internal/models"
+)
+
+templ Watch(file models.File) {
+	@AppShell("watch") {
+		<section id="watch-page" data-video-id={ file.ID.String() } class="mx-auto max-w-7xl space-y-6">
+			<div class="flex items-center justify-between gap-3">
+				<a href={ templ.URL("/?type=video&folder=" + file.Folder) } class="inline-flex items-center gap-2 rounded-xl border border-input bg-background px-3.5 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent">
+					<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+					Back to Videos
+				</a>
+				<a id="watch-download" href={ templ.URL("/api/file/" + file.ID.String()) } download class="inline-flex items-center gap-2 rounded-xl border border-input bg-background px-3.5 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent">
+					<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>
+					<span class="hidden sm:inline">Download</span>
+				</a>
+			</div>
+
+			<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+				<div class="min-w-0 space-y-4">
+					<div class="overflow-hidden rounded-2xl border border-border bg-black shadow-xl">
+						<video id="watch-player" controls preload="metadata" src={ templ.URL("/api/file/" + file.ID.String()) } class="aspect-video h-auto w-full bg-black"></video>
+					</div>
+					<div class="space-y-1">
+						<h1 id="watch-title" class="break-words text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{ file.DisplayName() }</h1>
+						<p id="watch-meta" class="text-sm text-muted-foreground">{ file.SizeFormatted() } &middot; { file.TypeBadge() }</p>
+					</div>
+				</div>
+
+				<aside class="rounded-2xl border border-border bg-card p-3 shadow-sm">
+					<div class="mb-3 px-1">
+						<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">More in this folder</h2>
+						<p id="watch-queue-count" class="text-xs text-muted-foreground">Loading videos…</p>
+					</div>
+					<div id="watch-queue" class="max-h-[60vh] space-y-1 overflow-y-auto pr-1"></div>
+				</aside>
+			</div>
+		</section>
+		<script src="/assets/js/watch.js"></script>
+	}
+}
+
+templ WatchUnavailable() {
+	@AppShell("watch") {
+		<section class="mx-auto flex max-w-lg flex-col items-center rounded-2xl border border-dashed border-border bg-card/50 px-6 py-20 text-center">
+			<div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+				<svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M15 10 21 7v10l-6-3"/><rect width="15" height="14" x="3" y="5" rx="2"/></svg>
+			</div>
+			<h1 class="mt-4 text-xl font-bold">Video unavailable</h1>
+			<p class="mt-2 text-sm text-muted-foreground">This video does not exist, is not a video, or you do not have access to it.</p>
+			<a href="/?type=video" class="mt-6 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90">Back to Videos</a>
+		</section>
+	}
+}

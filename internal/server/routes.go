@@ -20,6 +20,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Use(chiMiddleware.Logger)
 	r.Use(chiMiddleware.Recoverer)
 	r.Use(middleware.CORS())
+	r.Use(middleware.SecurityHeaders())
 
 	// 1. UI & Frontend Routes
 	s.RegisterUIRoutes(r)

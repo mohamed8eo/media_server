@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -168,6 +169,7 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// Find user.
 	user, err := h.db.GetUserByEmail(req.Email)
 	if err != nil {
+		slog.Warn("auth.login.failed", "email", req.Email, "ip", r.RemoteAddr, "reason", "user_not_found")
 		// Don't reveal whether the email exists.
 		h.errorResponse(
 			w,
@@ -180,6 +182,7 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check password.
 	if !CheckPassword(req.Password, user.PasswordHash) {
+		slog.Warn("auth.login.failed", "email", req.Email, "user_id", user.ID, "ip", r.RemoteAddr, "reason", "invalid_password")
 		h.errorResponse(
 			w,
 			r,
@@ -188,6 +191,8 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
+
+	slog.Info("auth.login.success", "email", user.Email, "user_id", user.ID, "ip", r.RemoteAddr)
 
 	// Generate Access and Refresh Tokens.
 	accessToken, _, err := h.jwt.GenerateAccessToken(user.ID)
@@ -242,6 +247,7 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie("refresh_token"); err == nil && cookie != nil && cookie.Value != "" {
 		_ = h.db.RevokeRefreshToken(cookie.Value)
+		slog.Info("auth.token.revoked", "ip", r.RemoteAddr)
 	}
 
 	SetAuthCookie(w, "access_token", "", -1)

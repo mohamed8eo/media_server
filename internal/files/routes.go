@@ -148,6 +148,7 @@ func (h *FileHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 			absTarget, err1 := filepath.Abs(targetDir)
 			absUser, err2 := filepath.Abs(userDir)
 			if err1 != nil || err2 != nil || !strings.HasPrefix(absTarget, absUser) {
+				slog.Warn("file.upload.rejected", "user_id", userID, "ip", r.RemoteAddr, "reason", "path_traversal")
 				utils.RespondWithError(w, http.StatusBadRequest, "Invalid folder path")
 				return
 			}

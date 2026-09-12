@@ -74,6 +74,9 @@ function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
 
 let uploadedCount = 0;
 let totalUploads = 0;
+let uploadQueue = [];
+let activeUploads = 0;
+const MAX_CONCURRENT_UPLOADS = 4;
 
 function handleFiles(files) {
     if (!files || files.length === 0) return;
@@ -89,11 +92,24 @@ function handleFiles(files) {
         if (listEl) listEl.insertAdjacentHTML('beforeend',
             '<div id="' + id + '" class="rounded-xl border bg-card text-card-foreground shadow-sm p-4 space-y-3"><div class="flex items-center justify-between"><div class="flex items-center gap-3 min-w-0"><div class="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground shrink-0"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg></div><div class="min-w-0"><h4 class="text-sm font-medium truncate">' + escapeHtml(file.name) + '</h4><p class="text-xs text-muted-foreground">' + formatSize(file.size) + '</p></div></div><span id="' + id + '-status" class="text-xs text-muted-foreground">Waiting</span></div><div class="h-1.5 w-full overflow-hidden rounded-full bg-primary/20"><div id="' + id + '-progress" class="h-full w-0 rounded-full bg-primary transition-all duration-300"></div></div></div>'
         );
-        uploadFile(file, id);
+        uploadQueue.push({ file, id });
     });
+
+    processQueue();
 }
 
-function uploadFile(file, itemId) {
+function processQueue() {
+    while (activeUploads < MAX_CONCURRENT_UPLOADS && uploadQueue.length > 0) {
+        const item = uploadQueue.shift();
+        activeUploads++;
+        uploadFile(item.file, item.id, () => {
+            activeUploads--;
+            processQueue();
+        });
+    }
+}
+
+function uploadFile(file, itemId, onComplete) {
     const statusEl = document.getElementById(itemId + '-status');
     const progressEl = document.getElementById(itemId + '-progress');
     const folderSelect = document.getElementById('upload-folder-select');
@@ -115,6 +131,12 @@ function uploadFile(file, itemId) {
         }
     };
 
+    const finish = () => {
+        uploadedCount++;
+        updateUploadStatus();
+        if (typeof onComplete === 'function') onComplete();
+    };
+
     xhr.onload = function() {
         if (xhr.status >= 200 && xhr.status < 300) {
             if (statusEl) { statusEl.className = 'text-xs font-medium text-emerald-600 dark:text-emerald-400'; statusEl.textContent = 'Done'; }
@@ -128,15 +150,13 @@ function uploadFile(file, itemId) {
             if (statusEl) { statusEl.className = 'text-xs font-medium text-destructive'; statusEl.textContent = errText; }
             if (progressEl) progressEl.className = 'h-full rounded-full bg-destructive transition-all duration-300';
         }
-        uploadedCount++;
-        updateUploadStatus();
+        finish();
     };
 
     xhr.onerror = function() {
         if (statusEl) { statusEl.className = 'text-xs font-medium text-destructive'; statusEl.textContent = 'Network error'; }
         if (progressEl) progressEl.className = 'h-full rounded-full bg-destructive transition-all duration-300';
-        uploadedCount++;
-        updateUploadStatus();
+        finish();
     };
 
     xhr.send(formData);

@@ -1,5 +1,9 @@
 let allFiles = [];
 let allFolders = ['/'];
+let folderItems = [];
+let selectedItems = new Set();
+let selectionAnchor = null;
+let isTrashView = new URLSearchParams(window.location.search).get('trash') === '1';
 let currentView = localStorage.getItem('file_view') || 'grid';
 let currentFilter = new URLSearchParams(window.location.search).get('type') || 'all';
 let currentFolder = new URLSearchParams(window.location.search).get('folder') || '/';
@@ -11,6 +15,7 @@ document.addEventListener('mediaUpdated', () => {
 });
 
 function initFileBrowser() {
+	 isTrashView = new URLSearchParams(window.location.search).get('trash') === '1';
     setFileView(currentView, false);
     setFilter(currentFilter, false);
     fetchFiles();
@@ -30,6 +35,19 @@ function initFileBrowser() {
         }
     });
 }
+
+function itemKey(kind, id) { return kind + ':' + id; }
+function visibleItems() { return [...getFoldersInFolder(currentFolder).map(p => ({kind:'folder',id:(folderItems.find(f=>f.path===p)||{}).id})).filter(x=>x.id), ...getFilesInFolder(currentFolder).map(f=>({kind:'file',id:f.id}))]; }
+function toggleSelection(kind,id,checked,shift) { const items=visibleItems(),key=itemKey(kind,id),i=items.findIndex(x=>itemKey(x.kind,x.id)===key); if(shift&&selectionAnchor!==null&&i>=0){const [a,b]=[Math.min(selectionAnchor,i),Math.max(selectionAnchor,i)];items.slice(a,b+1).forEach(x=>checked?selectedItems.add(itemKey(x.kind,x.id)):selectedItems.delete(itemKey(x.kind,x.id)));}else{checked?selectedItems.add(key):selectedItems.delete(key);selectionAnchor=i;}renderAll(); }
+function clearSelection(){selectedItems.clear();selectionAnchor=null;renderAll();}
+function selectedPayload(){return [...selectedItems].map(key=>{const [kind,id]=key.split(':');return {kind,id};});}
+function renderSelectionBar(){const bar=document.getElementById('selection-bar'),count=document.getElementById('selection-count');if(!bar||!count)return;const n=selectedItems.size;bar.classList.toggle('hidden',!n);bar.classList.toggle('flex',!!n);count.textContent=n+' selected';const b=bar.querySelectorAll('button');if(isTrashView){b[0].textContent='Restore';b[0].onclick=batchRestore;b[1].textContent='Permanently delete';b[1].onclick=batchPurge;b[2].classList.add('hidden');}else{b[0].textContent='Move';b[0].onclick=batchMove;b[1].textContent='Download ZIP';b[1].onclick=batchDownload;b[2].classList.remove('hidden');}}
+async function batchRequest(url,method,extra={}){try{const res=await fetch(url,{method,credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:selectedPayload(),...extra})});if(!res.ok)throw new Error();clearSelection();await fetchFiles();showToast('Operation completed');}catch(e){showToast('Operation failed');}}
+async function batchDelete(){if(await showConfirmModal('Move to Recycle Bin',`Move ${selectedItems.size} item(s) to the recycle bin?`))await batchRequest('/api/file/batch/delete','POST');}
+async function batchMove(){const folder=await showFolderSelectModal('/');if(folder!==null)await batchRequest('/api/file/batch/move','PATCH',{folder});}
+async function batchDownload(){const res=await fetch('/api/file/batch/download',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:selectedPayload()})});if(!res.ok){showToast('Download failed');return;}const blob=await res.blob(),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='media-download.zip';a.click();URL.revokeObjectURL(a.href);}
+async function batchRestore(){await batchRequest('/api/file/trash/restore','POST');}
+async function batchPurge(){if(await showConfirmModal('Permanently delete','This cannot be undone.'))await batchRequest('/api/file/trash/purge','POST');}
 
 async function createNewFolder() {
     const name = await showFolderPrompt();
@@ -89,6 +107,7 @@ function showFolderPrompt() {
 }
 
 function getFoldersInFolder(folderPath) {
+    if (isTrashView) return allFolders.filter(f => f !== '/').sort();
     const prefix = folderPath === '/' ? '/' : folderPath.replace(/\/$/, '') + '/';
     return allFolders.filter(f => {
         if (f === folderPath) return false;
@@ -115,7 +134,10 @@ function getFolderItemCount(folderPath) {
 function renderFolderCard(folder) {
     const name = folder.split('/').pop();
     const count = getFolderItemCount(folder);
+    const folderId = (folderItems.find(f => f.path === folder) || {}).id;
+    const checked = folderId && selectedItems.has(itemKey('folder', folderId)) ? 'checked' : '';
     return `<div data-folder-path="${escapeHtml(folder)}" class="group relative cursor-pointer rounded-2xl border bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800 text-card-foreground p-4 hover:shadow-md hover:border-indigo-500/50 transition-all duration-200 flex items-center justify-between folder-card">
+		${folderId ? `<input type="checkbox" data-select-kind="folder" data-select-id="${folderId}" ${checked} class="absolute left-3 top-3 h-4 w-4 z-10" />` : ''}
         <div class="flex items-center gap-3.5 min-w-0">
             <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm">
                 <svg class="h-5 w-5 fill-indigo-500/20" fill="currentColor" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M2.75 12.75V12A2.25 2.25 0 0 1 5 9.75h14A2.25 2.25 0 0 1 21.25 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/></svg>
@@ -174,6 +196,7 @@ window.addEventListener('popstate', () => {
 });
 
 function renderAll() {
+    renderSelectionBar();
     renderBreadcrumbs();
     renderFiles();
     updateActiveFilterTab();
@@ -204,6 +227,7 @@ function normalizeFolder(path) {
 }
 
 function getFilesInFolder(folderPath) {
+    if (isTrashView) return allFiles;
     const target = normalizeFolder(folderPath);
     let files = allFiles.filter(f => normalizeFolder(f.folder || '/') === target);
     if (currentFilter && currentFilter !== 'all') {
@@ -238,7 +262,7 @@ function setFilter(filter, updateUrl = true) {
 function updateActiveFilterTab() {
     const titles = { all: 'All Media', video: 'Videos', image: 'Images', document: 'Documents', audio: 'Audio' };
     const titleEl = document.getElementById('section-title');
-    if (titleEl) titleEl.textContent = titles[currentFilter] || 'All Media';
+    if (titleEl) titleEl.textContent = isTrashView ? 'Recycle Bin' : (titles[currentFilter] || 'All Media');
 }
 
 function renderFiles() {
@@ -313,6 +337,8 @@ function renderFiles() {
             folderGridEl.innerHTML = folders.map(f => renderFolderCard(f)).join('');
             if (!folderGridEl._delegationBound) {
                 folderGridEl.addEventListener('click', function(e) {
+					var checkbox = e.target.closest('[data-select-kind]');
+					if (checkbox) { e.stopPropagation(); toggleSelection(checkbox.dataset.selectKind, checkbox.dataset.selectId, checkbox.checked, e.shiftKey); return; }
                     var folderCard = e.target.closest('[data-folder-path]');
                     if (folderCard) navigateToFolder(folderCard.dataset.folderPath);
                 });
@@ -334,6 +360,8 @@ function renderFiles() {
             gridEl.innerHTML = filesHtml;
             if (!gridEl._delegationBound) {
                 gridEl.addEventListener('click', function(e) {
+					var checkbox = e.target.closest('[data-select-kind]');
+					if (checkbox) { e.stopPropagation(); toggleSelection(checkbox.dataset.selectKind, checkbox.dataset.selectId, checkbox.checked, e.shiftKey); return; }
                     var card = e.target.closest('[data-file-id]');
                     if (!card) return;
                     var action = e.target.closest('[data-action]');
@@ -353,6 +381,8 @@ function renderFiles() {
             listEl.innerHTML = filesListHtml;
             if (!listEl._delegationBound) {
                 listEl.addEventListener('click', function(e) {
+					var checkbox = e.target.closest('[data-select-kind]');
+					if (checkbox) { e.stopPropagation(); toggleSelection(checkbox.dataset.selectKind, checkbox.dataset.selectId, checkbox.checked, e.shiftKey); return; }
                     var row = e.target.closest('[data-file-id]');
                     if (!row) return;
                     var action = e.target.closest('[data-action]');
@@ -394,6 +424,7 @@ function renderGridCard(f) {
         @mouseleave="if (!menuOpen) showActions = false"
         class="relative group rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-200 flex flex-col w-full cursor-pointer"
         :class="menuOpen ? 'z-50 relative' : 'z-10 relative'">
+        <input type="checkbox" data-select-kind="file" data-select-id="${f.id}" ${selectedItems.has(itemKey('file', f.id)) ? 'checked' : ''} class="absolute left-3 top-3 z-30 h-4 w-4" />
         <div class="aspect-video relative rounded-t-2xl overflow-hidden bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center">
             ${thumbHtml}
             <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
@@ -433,6 +464,7 @@ function renderListRow(f) {
         @mouseleave="if (!menuOpen) showActions = false"
         class="relative group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors border-b border-border dark:border-slate-800/60 last:border-0"
         :class="menuOpen ? 'z-50 relative' : 'z-0 relative'">
+        <input type="checkbox" data-select-kind="file" data-select-id="${f.id}" ${selectedItems.has(itemKey('file', f.id)) ? 'checked' : ''} class="h-4 w-4 shrink-0" />
         <div class="w-11 h-11 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900/60 shrink-0 flex items-center justify-center border border-border dark:border-slate-800">
             ${thumbHtml}
         </div>
@@ -827,11 +859,19 @@ function setFileView(view, save = true) {
 async function fetchFiles() {
     const loadingEl = document.getElementById('file-loading');
     try {
-        const res = await fetch('/api/file/', { method: 'GET', credentials: 'include' });
+        const res = await fetch(isTrashView ? '/api/file/trash' : '/api/file/', { method: 'GET', credentials: 'include' });
         if (!res.ok) { if (res.status === 401) return; throw new Error('Failed to fetch files'); }
         const data = await res.json();
-        allFiles = data.files || [];
-        allFolders = data.folders || ['/'];
+        if (isTrashView) {
+            const items = data.items || [];
+            allFiles = items.filter(x => x.kind === 'file').map(x => ({...x, filename:x.name, folder:'/', mime_type:'application/octet-stream', created_at:x.deleted_at}));
+            folderItems = items.filter(x => x.kind === 'folder').map(x => ({...x, path:x.path}));
+            allFolders = folderItems.map(x => x.path);
+        } else {
+            allFiles = data.files || [];
+            folderItems = (data.folders || []).map(x => typeof x === 'string' ? {id: x, path: x} : x);
+            allFolders = folderItems.map(x => x.path);
+        }
         if (!allFolders.includes('/')) allFolders.unshift('/');
         if (loadingEl) loadingEl.classList.add('hidden');
         renderAll();

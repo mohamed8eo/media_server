@@ -19,6 +19,15 @@ type File struct {
 	StoragePath  string
 	LastAccessed sql.NullTime
 	CreatedAt    sql.NullTime
+	DeletedAt    sql.NullTime
+}
+
+type Folder struct {
+	ID        string
+	UserID    string
+	Path      string
+	DeletedAt sql.NullTime
+	CreatedAt sql.NullTime
 }
 
 type RefreshToken struct {

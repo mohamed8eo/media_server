@@ -19,6 +19,17 @@ type File struct {
 	StoragePath  string     `json:"-"`
 	CreatedAt    time.Time  `json:"created_at"`
 	LastAccessed *time.Time `json:"last_accessed"`
+	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
+}
+
+// Folder is a first-class directory. Paths are unique per user and normalized
+// with a leading slash; the root itself is implicit and has no row.
+type Folder struct {
+	ID        uuid.UUID  `json:"id"`
+	UserID    uuid.UUID  `json:"user_id"`
+	Path      string     `json:"path"`
+	CreatedAt time.Time  `json:"created_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 }
 
 func (f *File) DisplayName() string {

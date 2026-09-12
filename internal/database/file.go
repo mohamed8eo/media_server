@@ -218,26 +218,14 @@ func (s *service) GetUserStorageUsage(userID uuid.UUID) (int64, error) {
 
 func (s *service) GetUserFileCountByCategory(userID uuid.UUID) (map[string]int, error) {
 	ctx := context.Background()
-	mimes, err := s.queries.ListMimeTypesByUser(ctx, userID.String())
+	rows, err := s.queries.GetFileCountByCategory(ctx, userID.String())
 	if err != nil {
 		return nil, err
 	}
 
 	counts := make(map[string]int)
-	for _, mimeType := range mimes {
-		mime := strings.ToLower(mimeType)
-		switch {
-		case strings.HasPrefix(mime, "video/"):
-			counts["video"]++
-		case strings.HasPrefix(mime, "image/"):
-			counts["image"]++
-		case strings.HasPrefix(mime, "audio/"):
-			counts["audio"]++
-		case strings.HasPrefix(mime, "application/pdf") || strings.HasPrefix(mime, "text/") || strings.Contains(mime, "document") || strings.Contains(mime, "word") || strings.Contains(mime, "sheet"):
-			counts["document"]++
-		default:
-			counts["other"]++
-		}
+	for _, row := range rows {
+		counts[row.Category] = int(row.Count)
 	}
 	return counts, nil
 }

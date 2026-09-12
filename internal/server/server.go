@@ -10,6 +10,7 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 
 	"mediaserver/internal/database"
+	"mediaserver/internal/files"
 )
 
 type Server struct {
@@ -25,14 +26,22 @@ func NewServer() *http.Server {
 
 		db: database.New(),
 	}
+	go func() {
+		files.PurgeExpired(NewServer.db, os.Getenv("STORAGE_PATH"))
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			files.PurgeExpired(NewServer.db, os.Getenv("STORAGE_PATH"))
+		}
+	}()
 
 	// Declare Server config
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", NewServer.port),
 		Handler:      NewServer.RegisterRoutes(),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  2 * time.Minute,
+		ReadTimeout:  30 * time.Minute,
+		WriteTimeout: 30 * time.Minute,
 	}
 
 	return server

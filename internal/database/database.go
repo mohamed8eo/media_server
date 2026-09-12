@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"mediaserver/internal/database/sqlc"
@@ -45,6 +46,29 @@ type Service interface {
 	UpdateFilename(fileID uuid.UUID, filename string) error
 	UpdateFileFolder(fileID uuid.UUID, folder string) error
 	UpdateFileSize(fileID uuid.UUID, size int64) error
+	CreateFolder(userID uuid.UUID, path string) (*models.Folder, error)
+	ListFoldersByUser(userID uuid.UUID) ([]models.Folder, error)
+	SoftDelete(userID uuid.UUID, items []ItemRef) error
+	MoveItems(userID uuid.UUID, items []ItemRef, destination string) error
+	ListTrash(userID uuid.UUID) ([]TrashItem, error)
+	RestoreTrash(userID uuid.UUID, items []ItemRef) error
+	FilesForPurge(userID uuid.UUID, items []ItemRef, expiredOnly bool) ([]models.File, error)
+	PurgeTrash(userID uuid.UUID, items []ItemRef, expiredOnly bool) error
+	ExpiredFilesForPurge(before time.Time) ([]models.File, error)
+	PurgeExpired(before time.Time) error
+}
+
+type ItemRef struct {
+	Kind string    `json:"kind"`
+	ID   uuid.UUID `json:"id"`
+}
+type TrashItem struct {
+	Kind      string    `json:"kind"`
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Path      string    `json:"path"`
+	DeletedAt time.Time `json:"deleted_at"`
+	Size      int64     `json:"size,omitempty"`
 }
 
 type service struct {
@@ -66,11 +90,23 @@ func New() Service {
 		os.Exit(1)
 	}
 
+	if !strings.Contains(dburl, "_journal_mode") {
+		if strings.Contains(dburl, "?") {
+			dburl += "&_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=5000"
+		} else {
+			dburl += "?_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=5000"
+		}
+	}
+
 	db, err := sql.Open("sqlite3", dburl)
 	if err != nil {
 		slog.Error("failed to open database", "error", err)
 		os.Exit(1)
 	}
+
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
 
 	goose.SetBaseFS(embedMigrations)
 	if err := goose.SetDialect("sqlite3"); err != nil {

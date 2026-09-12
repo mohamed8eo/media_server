@@ -79,8 +79,51 @@ func (q *Queries) GetFileByID(ctx context.Context, id string) (GetFileByIDRow, e
 	return i, err
 }
 
+const getFileCountByCategory = `-- name: GetFileCountByCategory :many
+SELECT 
+    CASE 
+        WHEN mime_type LIKE 'video/%' THEN 'video'
+        WHEN mime_type LIKE 'image/%' THEN 'image'
+        WHEN mime_type LIKE 'audio/%' THEN 'audio'
+        WHEN mime_type LIKE 'application/pdf%' OR mime_type LIKE 'text/%' OR mime_type LIKE '%document%' OR mime_type LIKE '%word%' OR mime_type LIKE '%sheet%' THEN 'document'
+        ELSE 'other'
+    END AS category,
+    COUNT(*) AS count
+FROM files
+WHERE user_id = ? AND deleted_at IS NULL
+GROUP BY category
+`
+
+type GetFileCountByCategoryRow struct {
+	Category string
+	Count    int64
+}
+
+func (q *Queries) GetFileCountByCategory(ctx context.Context, userID string) ([]GetFileCountByCategoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFileCountByCategory, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFileCountByCategoryRow
+	for rows.Next() {
+		var i GetFileCountByCategoryRow
+		if err := rows.Scan(&i.Category, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserStorageUsage = `-- name: GetUserStorageUsage :one
-SELECT COALESCE(SUM(size), 0) FROM files WHERE user_id = ?
+SELECT COALESCE(SUM(size), 0) FROM files WHERE user_id = ? AND deleted_at IS NULL
 `
 
 func (q *Queries) GetUserStorageUsage(ctx context.Context, userID string) (interface{}, error) {
@@ -91,7 +134,7 @@ func (q *Queries) GetUserStorageUsage(ctx context.Context, userID string) (inter
 }
 
 const listFilesByUser = `-- name: ListFilesByUser :many
-SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? ORDER BY created_at DESC
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC
 `
 
 type ListFilesByUserRow struct {
@@ -167,7 +210,7 @@ func (q *Queries) ListMimeTypesByUser(ctx context.Context, userID string) ([]str
 }
 
 const listRecentUploads = `-- name: ListRecentUploads :many
-SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? ORDER BY created_at DESC LIMIT ?
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?
 `
 
 type ListRecentUploadsParams struct {
@@ -221,7 +264,7 @@ func (q *Queries) ListRecentUploads(ctx context.Context, arg ListRecentUploadsPa
 }
 
 const listRecentlyPlayed = `-- name: ListRecentlyPlayed :many
-SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? AND last_accessed IS NOT NULL ORDER BY last_accessed DESC LIMIT ?
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? AND deleted_at IS NULL AND last_accessed IS NOT NULL ORDER BY last_accessed DESC LIMIT ?
 `
 
 type ListRecentlyPlayedParams struct {

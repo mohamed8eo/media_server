@@ -33,6 +33,15 @@ templ Browser(currentPage string) {
 					</div>
 				</div>
 			</div>
+			<div id="selection-bar" class="hidden items-center justify-between gap-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3.5 py-2 text-sm">
+				<span id="selection-count" class="font-medium"></span>
+				<div class="flex items-center gap-2">
+					<button onclick="batchMove()" class="rounded-lg border bg-background px-3 py-1.5">Move</button>
+					<button onclick="batchDownload()" class="rounded-lg border bg-background px-3 py-1.5">Download ZIP</button>
+					<button onclick="batchDelete()" class="rounded-lg bg-destructive px-3 py-1.5 text-destructive-foreground">Delete</button>
+					<button onclick="clearSelection()" class="rounded-lg px-2 py-1.5">Clear</button>
+				</div>
+			</div>
 		</div>
 
 		<!-- Content Sections: Folders First, Files Below -->

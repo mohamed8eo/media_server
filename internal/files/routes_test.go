@@ -107,3 +107,110 @@ func TestUploadAndListSubfolder(t *testing.T) {
 		t.Errorf("expected file folder to be '/testing', got '%s'", listResp.Files[0].Folder)
 	}
 }
+
+func TestBatchOperationsAndTrash(t *testing.T) {
+	os.Setenv("JWT_SECRET", "test-secret")
+	os.Setenv("APP_ENV", "local")
+	os.Setenv("BLUEPRINT_DB_URL", "file:files_test_batch?mode=memory&cache=shared")
+	os.Setenv("STORAGE_PATH", t.TempDir())
+	database.Reset()
+
+	db := database.New()
+	userID, err := db.CreateUser("testbatch@example.com", "passwordhash")
+	if err != nil {
+		t.Fatalf("failed to create test user: %v", err)
+	}
+
+	router := NewRouter(db)
+	authHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), middleware.UserIDKey, userID)
+		router.ServeHTTP(w, r.WithContext(ctx))
+	})
+
+	server := httptest.NewServer(authHandler)
+	defer server.Close()
+
+	// 1. Upload a file
+	bodyBuf := &bytes.Buffer{}
+	bodyWriter := multipart.NewWriter(bodyBuf)
+	fileWriter, _ := bodyWriter.CreateFormFile("file", "batchfile.txt")
+	fileWriter.Write([]byte("batch test content"))
+	bodyWriter.Close()
+
+	req, _ := http.NewRequest("POST", server.URL+"/", bodyBuf)
+	req.Header.Set("Content-Type", bodyWriter.FormDataContentType())
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("upload failed: %v, status: %v", err, resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// Get file ID from list
+	req, _ = http.NewRequest("GET", server.URL+"/", nil)
+	resp, _ = http.DefaultClient.Do(req)
+	var listResp ListResponse
+	json.NewDecoder(resp.Body).Decode(&listResp)
+	resp.Body.Close()
+
+	if len(listResp.Files) != 1 {
+		t.Fatalf("expected 1 file")
+	}
+	fileID := listResp.Files[0].ID
+
+	// 2. Batch Delete (Soft delete)
+	batchDelBody, _ := json.Marshal(map[string]any{
+		"items": []map[string]any{
+			{"kind": "file", "id": fileID},
+		},
+	})
+	req, _ = http.NewRequest("POST", server.URL+"/batch/delete", bytes.NewReader(batchDelBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("batch delete failed: %v, status: %v", err, resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// 3. Verify in Trash
+	req, _ = http.NewRequest("GET", server.URL+"/trash", nil)
+	resp, _ = http.DefaultClient.Do(req)
+	var trashResp struct {
+		Items []struct {
+			Kind string `json:"kind"`
+			ID   string `json:"id"`
+		} `json:"items"`
+	}
+	json.NewDecoder(resp.Body).Decode(&trashResp)
+	resp.Body.Close()
+	if len(trashResp.Items) != 1 {
+		t.Fatalf("expected 1 item in trash, got %d", len(trashResp.Items))
+	}
+
+	// 4. Restore from Trash
+	restoreBody, _ := json.Marshal(map[string]any{
+		"items": []map[string]any{
+			{"kind": "file", "id": fileID},
+		},
+	})
+	req, _ = http.NewRequest("POST", server.URL+"/trash/restore", bytes.NewReader(restoreBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("restore failed: %v, status: %v", err, resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// 5. Verify batch download
+	dlBody, _ := json.Marshal(map[string]any{
+		"items": []map[string]any{
+			{"kind": "file", "id": fileID},
+		},
+	})
+	req, _ = http.NewRequest("POST", server.URL+"/batch/download", bytes.NewReader(dlBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("batch download failed: %v, status: %v", err, resp.StatusCode)
+	}
+	resp.Body.Close()
+}

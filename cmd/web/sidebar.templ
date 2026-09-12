@@ -33,6 +33,10 @@ templ Sidebar(currentPage string) {
 				@icons.Upload(templ.Attributes{"class": "h-4 w-4"})
 				Upload
 			</a>
+			<a href="/?trash=1" data-nav="trash" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100">
+				@icons.Trash2(templ.Attributes{"class": "h-4 w-4"})
+				Recycle Bin
+			</a>
 		</nav>
 		<!-- Bottom Section -->
 		<div class="border-t px-3 py-4 space-y-1 border-border dark:border-slate-800/80">
@@ -53,6 +57,7 @@ templ Sidebar(currentPage string) {
 			else if (type === 'video') active = 'video';
 			else if (type === 'image') active = 'image';
 			else if (type === 'document') active = 'document';
+			else if (params.get('trash') === '1') active = 'trash';
 			document.querySelectorAll('#sidebar-nav a[data-nav], [data-nav]').forEach(link => {
 				if (link.dataset.nav === active) {
 					link.className = 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors bg-slate-100 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 font-semibold shadow-sm';
@@ -65,4 +70,3 @@ templ Sidebar(currentPage string) {
 		window.addEventListener('popstate', updateSidebarActive);
 	</script>
 }
-

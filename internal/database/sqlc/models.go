@@ -30,6 +30,16 @@ type Folder struct {
 	CreatedAt sql.NullTime
 }
 
+type Job struct {
+	ID        string
+	FileID    string
+	TaskType  string
+	Status    string
+	Error     sql.NullString
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
 type RefreshToken struct {
 	ID        string
 	UserID    string

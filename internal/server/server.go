@@ -35,6 +35,8 @@ func NewServer() *http.Server {
 		}
 	}()
 
+	files.ResumePendingJobs(NewServer.db, os.Getenv("STORAGE_PATH"))
+
 	// Declare Server config
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", NewServer.port),

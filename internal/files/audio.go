@@ -3,12 +3,52 @@ package files
 import (
 	"bytes"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
+
+	"mediaserver/internal/database"
+	"mediaserver/internal/jobqueue"
 
 	"github.com/google/uuid"
 )
+
+var GlobalAudioPool = jobqueue.NewPool(runtime.NumCPU(), 20)
+
+func ResumePendingJobs(db database.Service, storagePath string) {
+	jobs, err := db.GetPendingOrProcessingJobs()
+	if err != nil {
+		return
+	}
+	for _, job := range jobs {
+		file, err := db.GetFileByID(job.FileID)
+		if err != nil {
+			_ = db.UpdateJobStatus(job.ID, "failed", "file not found on disk")
+			continue
+		}
+		jobID := job.ID
+		fileID := file.ID
+		filePath := file.StoragePath
+		mimeType := file.MimeType
+
+		GlobalAudioPool.Submit(func() {
+			_ = db.UpdateJobStatus(jobID, "processing", "")
+			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+				_ = db.UpdateJobStatus(jobID, "failed", "file missing on disk")
+				return
+			}
+			h := &FileHandler{db: db, storagePath: storagePath}
+			if err := h.fixMediaIfNeeded(fileID, filePath, mimeType); err != nil {
+				slog.Error("resumed media fix failed", "job_id", jobID, "error", err)
+				_ = db.UpdateJobStatus(jobID, "failed", err.Error())
+			} else {
+				_ = db.UpdateJobStatus(jobID, "completed", "")
+			}
+		})
+	}
+}
 
 var browserSafeVideoCodecs = map[string]bool{
 	"h264": true,

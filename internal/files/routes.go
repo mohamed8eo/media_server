@@ -52,7 +52,7 @@ func NewRouter(db database.Service) http.Handler {
 	h := &FileHandler{
 		db:          db,
 		storagePath: os.Getenv("STORAGE_PATH"),
-		audioPool:   jobqueue.NewPool(runtime.NumCPU(), 20),
+		audioPool:   GlobalAudioPool,
 		thumbPool:   jobqueue.NewPool(runtime.NumCPU(), 50),
 	}
 
@@ -208,9 +208,15 @@ func (h *FileHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.HasPrefix(mimeType, "video/") {
+		jobID := uuid.New()
+		_ = h.db.CreateJob(jobID, fileID, "media_fix")
 		h.audioPool.Submit(func() {
+			_ = h.db.UpdateJobStatus(jobID, "processing", "")
 			if err := h.fixMediaIfNeeded(fileID, destPath, mimeType); err != nil {
 				slog.Error("media fix failed", "file_id", fileID, "error", err)
+				_ = h.db.UpdateJobStatus(jobID, "failed", err.Error())
+			} else {
+				_ = h.db.UpdateJobStatus(jobID, "completed", "")
 			}
 		})
 		h.thumbPool.Submit(func() {

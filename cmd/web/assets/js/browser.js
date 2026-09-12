@@ -15,10 +15,19 @@ document.addEventListener('mediaUpdated', () => {
 });
 
 function initFileBrowser() {
-	 isTrashView = new URLSearchParams(window.location.search).get('trash') === '1';
+    isTrashView = new URLSearchParams(window.location.search).get('trash') === '1';
+    currentFilter = new URLSearchParams(window.location.search).get('type') || 'all';
+    currentFolder = new URLSearchParams(window.location.search).get('folder') || '/';
     setFileView(currentView, false);
     setFilter(currentFilter, false);
-    fetchFiles();
+    if (typeof updateSidebarActive === 'function') updateSidebarActive();
+    if (typeof updateNavActive === 'function') updateNavActive();
+    if (allFiles.length > 0) {
+        renderAll();
+        fetchFiles();
+    } else {
+        fetchFiles();
+    }
 
     const searchInput = document.getElementById('file-search');
     if (searchInput) searchInput.addEventListener('input', () => renderFiles());
@@ -858,6 +867,9 @@ function setFileView(view, save = true) {
 
 async function fetchFiles() {
     const loadingEl = document.getElementById('file-loading');
+    if (allFiles.length === 0 && loadingEl) {
+        loadingEl.classList.remove('hidden');
+    }
     try {
         const res = await fetch(isTrashView ? '/api/file/trash' : '/api/file/', { method: 'GET', credentials: 'include' });
         if (!res.ok) { if (res.status === 401) return; throw new Error('Failed to fetch files'); }
@@ -877,7 +889,9 @@ async function fetchFiles() {
         renderAll();
     } catch (err) {
         console.error(err);
-        if (loadingEl) loadingEl.innerHTML = '<p class="text-sm text-destructive font-medium">Failed to load files. Please refresh.</p>';
+        if (allFiles.length === 0 && loadingEl) {
+            loadingEl.innerHTML = '<p class="text-sm text-destructive font-medium">Failed to load files. Please refresh.</p>';
+        }
     }
 }
 
@@ -890,6 +904,16 @@ function openFile(file) {
     const cat = getCategoryFromMime(file.mime_type);
     if (cat === 'video') {
         window.location.href = '/watch/' + encodeURIComponent(file.id);
+    } else if (file.mime_type && file.mime_type.toLowerCase().includes('pdf')) {
+        // Mobile and tablet browsers commonly cannot render PDFs nested in an iframe.
+        // Use the browser's native PDF reader (top-level navigation) for mobile/tablet,
+        // and keep the viewer modal for desktop PC.
+        const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Tablet|Mobile/i.test(navigator.userAgent) || window.innerWidth < 1024;
+        if (isMobileOrTablet) {
+            window.location.href = '/api/file/' + encodeURIComponent(file.id) + '/' + encodeURIComponent(file.filename);
+        } else {
+            showFileViewerModal(file, 'document');
+        }
     } else if (cat === 'image' || cat === 'document') {
         showFileViewerModal(file, cat);
     } else {

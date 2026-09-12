@@ -69,6 +69,7 @@ func NewRouter(db database.Service) http.Handler {
 	r.Post("/trash/purge", h.PurgeTrashHandler)
 	r.Post("/trash/empty", h.EmptyTrashHandler)
 	r.Get("/{id}", h.GetFileHandler)
+	r.Get("/{id}/{filename}", h.GetFileHandler)
 	r.Get("/{id}/thumb", h.ThumbnailHandler)
 	r.Delete("/{id}", h.DeleteFileHandler)
 	r.Patch("/{id}/rename", h.RenameFileHandler)
@@ -285,7 +286,12 @@ func (h *FileHandler) GetFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", file.MimeType)
-	if !serveInline {
+	if serveInline {
+		w.Header().Set(
+			"Content-Disposition",
+			fmt.Sprintf(`inline; filename="%s"`, file.Filename),
+		)
+	} else {
 		w.Header().Set(
 			"Content-Disposition",
 			fmt.Sprintf(`attachment; filename="%s"`, file.Filename),

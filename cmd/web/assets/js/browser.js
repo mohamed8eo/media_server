@@ -419,7 +419,7 @@ function renderGridCard(f) {
     }
 
     return `<div data-file-id="${f.id}" 
-        x-data="{ showActions: false, menuOpen: false }"
+        x-data="{ showActions: window.matchMedia('(hover: none)').matches, menuOpen: false }"
         @mouseenter="showActions = true"
         @mouseleave="if (!menuOpen) showActions = false"
         class="relative group rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-200 flex flex-col w-full cursor-pointer"
@@ -434,7 +434,7 @@ function renderGridCard(f) {
             x-transition:enter="transition ease-out duration-150"
             x-transition:enter-start="opacity-0 translate-y-1"
             x-transition:enter-end="opacity-100 translate-y-0"
-            class="absolute top-2 right-2 p-1 flex items-center gap-1 bg-background/90 dark:bg-slate-900/90 backdrop-blur-md rounded-xl border border-border dark:border-slate-800 shadow-lg z-25 max-w-[calc(100%-1rem)] overflow-x-auto scrollbar-none">
+            class="absolute right-2 top-2 z-30 flex max-w-[calc(100%-1rem)] items-center gap-1 overflow-x-auto rounded-xl border border-border bg-background/90 p-1 shadow-lg backdrop-blur-md scrollbar-none dark:border-slate-800 dark:bg-slate-900/90">
             ${actions}
         </div>
         <div class="p-3.5 space-y-2 flex-1 flex flex-col justify-between">
@@ -459,10 +459,10 @@ function renderListRow(f) {
     const actions = getFileActionsInline(f);
 
     return `<div data-file-id="${f.id}" 
-        x-data="{ showActions: false, menuOpen: false }"
+        x-data="{ showActions: window.matchMedia('(hover: none)').matches, menuOpen: false }"
         @mouseenter="showActions = true"
         @mouseleave="if (!menuOpen) showActions = false"
-        class="relative group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors border-b border-border dark:border-slate-800/60 last:border-0"
+        class="relative group flex min-w-0 items-center gap-2 px-3 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40 sm:gap-4 sm:px-4 cursor-pointer border-b border-border dark:border-slate-800/60 last:border-0"
         :class="menuOpen ? 'z-50 relative' : 'z-0 relative'">
         <input type="checkbox" data-select-kind="file" data-select-id="${f.id}" ${selectedItems.has(itemKey('file', f.id)) ? 'checked' : ''} class="h-4 w-4 shrink-0" />
         <div class="w-11 h-11 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900/60 shrink-0 flex items-center justify-center border border-border dark:border-slate-800">
@@ -480,7 +480,7 @@ function renderListRow(f) {
             x-transition:enter="transition ease-out duration-150"
             x-transition:enter-start="opacity-0 translate-y-1"
             x-transition:enter-end="opacity-100 translate-y-0"
-            class="flex items-center gap-1.5 shrink-0 z-25">
+            class="z-30 flex shrink-0 items-center gap-1 sm:gap-1.5">
             ${actions}
         </div>
     </div>`;
@@ -615,9 +615,9 @@ function handleFileAction(action, fileId, e) {
 
 function showFileInfoModal(file) {
     const dialog = document.createElement('div');
-    dialog.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in';
+    dialog.className = 'fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm animate-in fade-in sm:p-4';
     dialog.innerHTML = `
-        <div class="bg-card border border-border dark:border-slate-800 rounded-2xl p-6 shadow-2xl max-w-md w-full mx-4 space-y-4 animate-in zoom-in-95">
+        <div class="my-auto w-full max-w-md space-y-4 rounded-2xl border border-border bg-card p-4 shadow-2xl animate-in zoom-in-95 dark:border-slate-800 sm:p-6">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">File Information</h3>
                 <button id="info-close" class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
@@ -625,23 +625,23 @@ function showFileInfoModal(file) {
                 </button>
             </div>
             <div class="space-y-3 text-sm text-slate-700 dark:text-slate-300">
-                <div class="flex justify-between py-1 border-b border-border/60">
+                <div class="flex flex-col gap-1 border-b border-border/60 py-1 min-[400px]:flex-row min-[400px]:justify-between">
                     <span class="font-medium text-slate-500">Filename</span>
                     <span class="truncate max-w-[240px]" title="${escapeHtml(file.filename)}">${escapeHtml(file.filename)}</span>
                 </div>
-                <div class="flex justify-between py-1 border-b border-border/60">
+                <div class="flex flex-col gap-1 border-b border-border/60 py-1 min-[400px]:flex-row min-[400px]:justify-between">
                     <span class="font-medium text-slate-500">Size</span>
                     <span>${formatSize(file.size)}</span>
                 </div>
-                <div class="flex justify-between py-1 border-b border-border/60">
+                <div class="flex flex-col gap-1 border-b border-border/60 py-1 min-[400px]:flex-row min-[400px]:justify-between">
                     <span class="font-medium text-slate-500">Type</span>
                     <span>${escapeHtml(file.mime_type)}</span>
                 </div>
-                <div class="flex justify-between py-1 border-b border-border/60">
+                <div class="flex flex-col gap-1 border-b border-border/60 py-1 min-[400px]:flex-row min-[400px]:justify-between">
                     <span class="font-medium text-slate-500">Folder</span>
                     <span>${escapeHtml(file.folder)}</span>
                 </div>
-                <div class="flex justify-between py-1 border-b border-border/60">
+                <div class="flex flex-col gap-1 border-b border-border/60 py-1 min-[400px]:flex-row min-[400px]:justify-between">
                     <span class="font-medium text-slate-500">Uploaded</span>
                     <span>${formatDate(file.created_at)}</span>
                 </div>
@@ -718,12 +718,12 @@ async function showDeleteConfirm(file) {
 function showConfirmModal(title, message) {
     return new Promise(resolve => {
         const dialog = document.createElement('div');
-        dialog.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in';
+        dialog.className = 'fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm animate-in fade-in sm:p-4';
         dialog.innerHTML = `
-            <div class="bg-card border border-border dark:border-slate-800 rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 space-y-4 animate-in zoom-in-95">
+            <div class="my-auto w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-4 shadow-2xl animate-in zoom-in-95 dark:border-slate-800 sm:p-6">
                 <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">${title}</h3>
                 <p class="text-sm text-slate-600 dark:text-slate-400">${escapeHtml(message)}</p>
-                <div class="flex justify-end gap-2.5 pt-2">
+                <div class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end sm:gap-2.5">
                     <button id="confirm-cancel" class="inline-flex items-center justify-center rounded-xl text-sm font-medium border border-input bg-background h-9 px-4 hover:bg-accent">Cancel</button>
                     <button id="confirm-ok" class="inline-flex items-center justify-center rounded-xl text-sm font-medium bg-destructive text-destructive-foreground shadow h-9 px-4 hover:bg-destructive/90">Delete</button>
                 </div>
@@ -747,12 +747,12 @@ function showConfirmModal(title, message) {
 function showPromptModal(title, initialValue) {
     return new Promise(resolve => {
         const dialog = document.createElement('div');
-        dialog.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in';
+        dialog.className = 'fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm animate-in fade-in sm:p-4';
         dialog.innerHTML = `
-            <div class="bg-card border border-border dark:border-slate-800 rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 space-y-4 animate-in zoom-in-95">
+            <div class="my-auto w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-4 shadow-2xl animate-in zoom-in-95 dark:border-slate-800 sm:p-6">
                 <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">${title}</h3>
                 <input type="text" id="prompt-input" value="${escapeHtml(initialValue)}" class="flex h-10 w-full rounded-xl border border-input dark:border-slate-800 bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" autofocus />
-                <div class="flex justify-end gap-2.5">
+                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-2.5">
                     <button id="prompt-cancel" class="inline-flex items-center justify-center rounded-xl text-sm font-medium border border-input bg-background h-9 px-4 hover:bg-accent">Cancel</button>
                     <button id="prompt-ok" class="inline-flex items-center justify-center rounded-xl text-sm font-medium bg-primary text-primary-foreground shadow h-9 px-4 hover:bg-primary/90">Save</button>
                 </div>
@@ -782,15 +782,15 @@ function showPromptModal(title, initialValue) {
 function showFolderSelectModal(currentFolder) {
     return new Promise(resolve => {
         const dialog = document.createElement('div');
-        dialog.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in';
+        dialog.className = 'fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm animate-in fade-in sm:p-4';
         const optionsHtml = allFolders.map(f => `<option value="${escapeHtml(f)}" ${f === currentFolder ? 'selected' : ''}>${escapeHtml(f)}</option>`).join('');
         dialog.innerHTML = `
-            <div class="bg-card border border-border dark:border-slate-800 rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 space-y-4 animate-in zoom-in-95">
+            <div class="my-auto w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-4 shadow-2xl animate-in zoom-in-95 dark:border-slate-800 sm:p-6">
                 <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Move to Folder</h3>
                 <select id="folder-select" class="flex h-10 w-full rounded-xl border border-input dark:border-slate-800 bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
                     ${optionsHtml}
                 </select>
-                <div class="flex justify-end gap-2.5">
+                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-2.5">
                     <button id="folder-sel-cancel" class="inline-flex items-center justify-center rounded-xl text-sm font-medium border border-input bg-background h-9 px-4 hover:bg-accent">Cancel</button>
                     <button id="folder-sel-ok" class="inline-flex items-center justify-center rounded-xl text-sm font-medium bg-primary text-primary-foreground shadow h-9 px-4 hover:bg-primary/90">Move</button>
                 </div>
@@ -813,7 +813,7 @@ function showFolderSelectModal(currentFolder) {
 
 function showToast(message) {
     const toast = document.createElement('div');
-    toast.className = 'fixed bottom-4 right-4 z-[100] rounded-xl bg-foreground text-background px-4 py-2.5 text-sm font-medium shadow-2xl animate-in fade-in slide-in-from-bottom-4';
+    toast.className = 'fixed bottom-20 left-3 right-3 z-[100] break-words rounded-xl bg-foreground px-4 py-2.5 text-sm font-medium text-background shadow-2xl animate-in fade-in slide-in-from-bottom-4 sm:bottom-4 sm:left-auto sm:right-4 sm:max-w-sm';
     toast.textContent = message;
     document.body.appendChild(toast);
     setTimeout(() => { toast.remove(); }, 2500);

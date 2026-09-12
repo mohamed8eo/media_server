@@ -7,14 +7,14 @@ templ Browser(currentPage string) {
 		<!-- Toolbar -->
 		<div class="space-y-4">
 			<div id="breadcrumbs" class="flex items-center gap-1.5 text-sm text-muted-foreground overflow-x-auto whitespace-nowrap pb-1"></div>
-			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-				<div class="flex items-center gap-2">
-					<h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100" id="section-title">All Media</h2>
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+				<div class="flex min-w-0 items-center gap-2">
+					<h2 class="truncate text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100" id="section-title">All Media</h2>
 					<span id="file-count" class="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-lg tabular-nums font-medium"></span>
 				</div>
-				<div class="flex items-center gap-2.5">
+				<div class="flex w-full items-center gap-2 sm:w-auto sm:gap-2.5">
 					<!-- Sort -->
-					<select id="file-sort" class="flex h-10 items-center justify-between whitespace-nowrap rounded-xl border border-input dark:border-slate-800 bg-background dark:bg-slate-900/60 px-3.5 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+					<select id="file-sort" class="h-10 min-w-0 flex-1 rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring dark:border-slate-800 dark:bg-slate-900/60 sm:w-auto sm:flex-none sm:px-3.5">
 						<option value="date-desc">Newest</option>
 						<option value="date-asc">Oldest</option>
 						<option value="name-asc">Name A-Z</option>
@@ -33,13 +33,13 @@ templ Browser(currentPage string) {
 					</div>
 				</div>
 			</div>
-			<div id="selection-bar" class="hidden items-center justify-between gap-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3.5 py-2 text-sm">
+			<div id="selection-bar" class="hidden flex-col gap-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3.5 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
 				<span id="selection-count" class="font-medium"></span>
-				<div class="flex items-center gap-2">
-					<button onclick="batchMove()" class="rounded-lg border bg-background px-3 py-1.5">Move</button>
-					<button onclick="batchDownload()" class="rounded-lg border bg-background px-3 py-1.5">Download ZIP</button>
-					<button onclick="batchDelete()" class="rounded-lg bg-destructive px-3 py-1.5 text-destructive-foreground">Delete</button>
-					<button onclick="clearSelection()" class="rounded-lg px-2 py-1.5">Clear</button>
+				<div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+					<button onclick="batchMove()" class="min-h-9 rounded-lg border bg-background px-3 py-1.5">Move</button>
+					<button onclick="batchDownload()" class="min-h-9 rounded-lg border bg-background px-3 py-1.5">Download ZIP</button>
+					<button onclick="batchDelete()" class="min-h-9 rounded-lg bg-destructive px-3 py-1.5 text-destructive-foreground">Delete</button>
+					<button onclick="clearSelection()" class="min-h-9 rounded-lg px-2 py-1.5">Clear</button>
 				</div>
 			</div>
 		</div>
@@ -51,18 +51,18 @@ templ Browser(currentPage string) {
 				<p class="text-sm">Loading your media...</p>
 			</div>
 
-			<div id="file-empty" class="hidden flex flex-col items-center justify-center rounded-2xl border border-dashed border-border dark:border-slate-800 p-12 text-center bg-card/40">
+			<div id="file-empty" class="hidden flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 p-6 text-center dark:border-slate-800 sm:p-12">
 				<div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-muted/80 text-muted-foreground shadow-sm">
 					@icons.Folder(templ.Attributes{"class": "h-10 w-10"})
 				</div>
 				<h3 class="mt-4 text-lg font-semibold text-slate-900 dark:text-slate-100">No media here yet</h3>
 				<p class="mb-6 mt-1.5 text-sm text-muted-foreground max-w-sm">Upload files or create a subfolder to organize your media library.</p>
-				<div class="flex items-center gap-3">
-					<a href="/upload" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-5 py-2">
+				<div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-3">
+					<a href="/upload" class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90">
 						@icons.Upload(templ.Attributes{"class": "h-4 w-4"})
 						Upload Files
 					</a>
-					<button onclick="createNewFolder()" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors border border-input dark:border-slate-800 bg-background dark:bg-slate-900 shadow-sm hover:bg-accent h-10 px-5 py-2">
+					<button onclick="createNewFolder()" class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-input bg-background px-5 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent dark:border-slate-800 dark:bg-slate-900">
 						@icons.FolderPlus(templ.Attributes{"class": "h-4 w-4"})
 						New Folder
 					</button>
@@ -75,7 +75,7 @@ templ Browser(currentPage string) {
 					<h3 class="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-300 uppercase">Folders</h3>
 					<span id="folder-count" class="text-xs text-muted-foreground tabular-nums"></span>
 				</div>
-				<div id="folder-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5"></div>
+				<div id="folder-grid" class="grid grid-cols-1 gap-3.5 min-[480px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
 			</div>
 
 			<!-- Files Section -->
@@ -84,7 +84,7 @@ templ Browser(currentPage string) {
 					<h3 class="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-300 uppercase">Files</h3>
 					<span id="file-items-count" class="text-xs text-muted-foreground tabular-nums"></span>
 				</div>
-				<div id="file-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4"></div>
+				<div id="file-grid" class="grid grid-cols-1 gap-3.5 min-[480px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-4"></div>
 				<div id="file-list" class="hidden rounded-2xl border border-border dark:border-slate-800 bg-card text-card-foreground shadow-sm divide-y divide-border/60"></div>
 			</div>
 		</div>

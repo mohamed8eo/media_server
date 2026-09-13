@@ -214,3 +214,69 @@ func TestBatchOperationsAndTrash(t *testing.T) {
 	}
 	resp.Body.Close()
 }
+
+func TestDownloadURLHandler(t *testing.T) {
+	os.Setenv("JWT_SECRET", "test-secret")
+	os.Setenv("APP_ENV", "local")
+	os.Setenv("BLUEPRINT_DB_URL", "file:files_test_dlurl?mode=memory&cache=shared")
+	os.Setenv("STORAGE_PATH", t.TempDir())
+	database.Reset()
+
+	db := database.New()
+	userID, err := db.CreateUser("testdlurl@example.com", "passwordhash")
+	if err != nil {
+		t.Fatalf("failed to create test user: %v", err)
+	}
+
+	router := NewRouter(db)
+	authHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), middleware.UserIDKey, userID)
+		router.ServeHTTP(w, r.WithContext(ctx))
+	})
+
+	server := httptest.NewServer(authHandler)
+	defer server.Close()
+
+	payload, _ := json.Marshal(DownloadURLRequest{
+		URL:     "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+		Quality: "1080p",
+		Folder:  "/",
+	})
+
+	req, err := http.NewRequest("POST", server.URL+"/download-url", bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusAccepted {
+		t.Errorf("expected status 202 Accepted, got %v", resp.Status)
+	}
+
+	var resMap map[string]string
+	json.NewDecoder(resp.Body).Decode(&resMap)
+	jobID := resMap["job_id"]
+	if jobID == "" {
+		t.Fatalf("expected job_id in response")
+	}
+
+	// Test GET /jobs/{id}
+	reqGet, _ := http.NewRequest("GET", server.URL+"/jobs/"+jobID, nil)
+	respGet, err := http.DefaultClient.Do(reqGet)
+	if err != nil || respGet.StatusCode != http.StatusOK {
+		t.Fatalf("get job failed: %v, status: %v", err, respGet.StatusCode)
+	}
+	defer respGet.Body.Close()
+
+	var jobResp map[string]any
+	json.NewDecoder(respGet.Body).Decode(&jobResp)
+	if jobResp["id"] != jobID {
+		t.Errorf("expected job id %s, got %v", jobID, jobResp["id"])
+	}
+}

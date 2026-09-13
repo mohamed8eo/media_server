@@ -5,11 +5,28 @@
     const player = document.getElementById('watch-player');
     const title = document.getElementById('watch-title');
     const meta = document.getElementById('watch-meta');
+    const badge = document.getElementById('watch-badge');
     const download = document.getElementById('watch-download');
     const queue = document.getElementById('watch-queue');
-    const queueCount = document.getElementById('watch-queue-count');
     let videos = [];
     let currentID = page.dataset.videoId;
+
+    const GRADIENT_PALETTE = [
+        'from-blue-500 to-cyan-400',
+        'from-red-500 to-orange-400',
+        'from-emerald-500 to-green-400',
+        'from-purple-500 to-fuchsia-400',
+        'from-amber-500 to-yellow-400',
+        'from-pink-500 to-rose-400',
+        'from-cyan-500 to-sky-400',
+        'from-indigo-500 to-violet-400',
+    ];
+    function gradientForKey(key) {
+        let hash = 0;
+        const str = String(key || '');
+        for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+        return GRADIENT_PALETTE[hash % GRADIENT_PALETTE.length];
+    }
 
     function escapeHtml(value) {
         return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -46,17 +63,17 @@
 
     function renderQueue() {
         const items = queueVideos();
-        queueCount.textContent = items.length === 1 ? '1 video in this folder' : `${items.length} videos in this folder`;
         queue.innerHTML = items.map(video => {
             const active = video.id === currentID;
-            return `<button type="button" data-watch-id="${escapeHtml(video.id)}" aria-current="${active ? 'true' : 'false'}" class="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors ${active ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-accent'}">
-                <div class="relative h-14 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                    <img src="/api/file/${escapeHtml(video.id)}/thumb" alt="" class="h-full w-full object-cover" onerror="this.style.display='none'" />
-                    <svg class="absolute inset-0 m-auto h-5 w-5 text-muted-foreground" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                </div>
-                <span class="min-w-0 flex-1">
-                    <span class="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">${escapeHtml(displayName(video.filename))}</span>
-                    <span class="block pt-0.5 text-xs text-muted-foreground">${formatSize(video.size)} &middot; ${escapeHtml(typeBadge(video.mime_type))}</span>
+            const gradient = gradientForKey(video.id);
+            return `<button type="button" data-watch-id="${escapeHtml(video.id)}" aria-current="${active ? 'true' : 'false'}" class="grid w-full grid-cols-[100px_minmax(0,1fr)] gap-3 rounded-lg p-2 text-left transition-colors ${active ? 'bg-accent' : 'hover:bg-muted'}">
+                <span class="relative aspect-video overflow-hidden rounded-lg bg-gradient-to-br ${gradient} grid place-items-center text-white">
+                    <img src="/api/file/${escapeHtml(video.id)}/thumb" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.remove()" />
+                    <svg class="relative h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </span>
+                <span class="min-w-0 self-center">
+                    <span class="block truncate text-sm font-semibold">${escapeHtml(displayName(video.filename))}</span>
+                    <span class="mt-1 block text-xs text-muted-foreground">${formatSize(video.size)} &middot; ${escapeHtml(typeBadge(video.mime_type))}</span>
                 </span>
             </button>`;
         }).join('');
@@ -75,7 +92,8 @@
         player.src = `/api/file/${encodeURIComponent(video.id)}`;
         player.load();
         title.textContent = displayName(video.filename);
-        meta.textContent = `${formatSize(video.size)} · ${typeBadge(video.mime_type)}`;
+        meta.textContent = `${formatSize(video.size)} · MediaVault ${normalFolder(video.folder)}`;
+        if (badge) badge.textContent = typeBadge(video.mime_type);
         download.href = `/api/file/${encodeURIComponent(video.id)}`;
         document.title = `${displayName(video.filename)} · Media Server`;
         if (updateHistory) history.pushState({ videoID: id }, '', `/watch/${encodeURIComponent(id)}`);
@@ -91,8 +109,7 @@
             if (!currentVideo()) throw new Error('Video unavailable');
             renderQueue();
         } catch (error) {
-            queueCount.textContent = 'Unable to load videos';
-            queue.innerHTML = '<p class="px-2 py-4 text-sm text-muted-foreground">Try refreshing the page.</p>';
+            queue.innerHTML = '<p class="px-2 py-4 text-sm text-muted-foreground">Unable to load videos. Try refreshing the page.</p>';
         }
     }
 

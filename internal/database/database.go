@@ -57,9 +57,12 @@ type Service interface {
 	PurgeTrash(userID uuid.UUID, items []ItemRef, expiredOnly bool) error
 	ExpiredFilesForPurge(before time.Time) ([]models.File, error)
 	PurgeExpired(before time.Time) error
-	CreateJob(id, fileID uuid.UUID, taskType string) error
+	CreateJob(id, fileID, userID uuid.UUID, taskType string) error
+	GetJobByID(id uuid.UUID) (Job, error)
 	GetPendingOrProcessingJobs() ([]Job, error)
+	ListActiveJobsByUser(userID uuid.UUID) ([]Job, error)
 	UpdateJobStatus(id uuid.UUID, status string, errMsg string) error
+	UpdateJobProgress(id uuid.UUID, progress int) error
 }
 
 type ItemRef struct {

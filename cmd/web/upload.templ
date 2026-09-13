@@ -3,36 +3,62 @@ package web
 import "github.com/bryanvaz/go-templ-lucide-icons"
 
 templ Upload() {
-	@AppShell("upload") {
-		<div class="mx-auto flex max-w-2xl flex-col gap-5 sm:gap-6">
-			<div class="space-y-1 text-center">
-				<h1 class="text-2xl font-bold tracking-tight">Upload files</h1>
-				<p class="text-sm text-muted-foreground">Drag and drop files to add them to your workspace</p>
-			</div>
-			<!-- Folder selector -->
-			<div class="flex flex-col gap-3 rounded-xl border bg-card p-4 text-card-foreground shadow-sm sm:flex-row sm:items-center sm:justify-between">
-				<label for="upload-folder-select" class="text-sm font-medium leading-none">Upload to folder</label>
-				<select id="upload-folder-select" class="flex h-9 items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring w-full sm:w-auto sm:min-w-[160px]">
-					<option value="/">/</option>
-				</select>
-			</div>
-			<!-- Dropzone -->
-			<div id="dropzone" class="relative flex min-h-56 flex-col items-center justify-center rounded-xl border border-dashed p-6 text-center transition-colors hover:bg-muted/50 cursor-pointer sm:min-h-72 sm:p-12">
-				<input type="file" id="file-input" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-				<div class="flex flex-col items-center justify-center space-y-4 pointer-events-none">
-					<div class="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-						@icons.Upload(templ.Attributes{"class": "h-8 w-8 text-muted-foreground"})
+	@AppShell("upload", "Add to MediaVault", "Upload from this device or download directly from a link.") {
+		<div class="mx-auto max-w-4xl space-y-6">
+			<!-- Download from Link Card -->
+			<div class="rounded-2xl border bg-card p-5 sm:p-7 text-card-foreground shadow-sm space-y-4">
+				<div class="flex items-center gap-3">
+					<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-primary">
+						@icons.Link2(templ.Attributes{"class": "h-5 w-5"})
 					</div>
-					<div class="space-y-1">
-						<p class="text-sm font-medium">Drag files here or <span class="text-primary underline underline-offset-4">browse</span></p>
-						<p class="text-xs text-muted-foreground">Supports multi-file upload up to 10GB per file</p>
+					<div>
+						<h2 class="font-bold">Download from link</h2>
+						<p class="text-sm text-muted-foreground">YouTube and direct video links</p>
+					</div>
+				</div>
+				<div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
+					<input type="text" id="download-url-input" placeholder="https://www.youtube.com/watch?v=..." class="flex h-11 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+					<select id="download-quality-select" class="flex h-11 items-center justify-between whitespace-nowrap rounded-xl border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring">
+						<option value="best">Best Quality</option>
+						<option value="1080p">1080p</option>
+						<option value="720p">720p</option>
+						<option value="480p">480p</option>
+						<option value="audio">Audio (MP3)</option>
+					</select>
+					<button type="button" id="download-url-btn" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-11 px-5 py-2 shrink-0">
+						@icons.Download(templ.Attributes{"class": "h-4 w-4"})
+						Download
+					</button>
+				</div>
+				<div class="mt-4">
+					<label for="upload-folder-select" class="mb-2 block text-sm font-medium">Save to folder</label>
+					<select id="upload-folder-select" class="flex h-11 items-center justify-between whitespace-nowrap rounded-xl border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring w-full sm:max-w-sm">
+						<option value="/">/</option>
+					</select>
+				</div>
+				<div id="download-url-status" class="text-xs text-muted-foreground hidden"></div>
+			</div>
+
+			<!-- Dropzone Card -->
+			<div class="rounded-2xl border bg-card p-5 sm:p-7 text-card-foreground shadow-sm">
+				<div id="dropzone" class="relative grid min-h-64 place-items-center rounded-xl border-2 border-dashed border-border bg-muted/40 p-8 text-center transition-colors hover:bg-muted/50 cursor-pointer">
+					<input type="file" id="file-input" multiple class="hidden" />
+					<div class="flex flex-col items-center justify-center space-y-3 pointer-events-none">
+						<div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-primary">
+							@icons.Upload(templ.Attributes{"class": "h-7 w-7"})
+						</div>
+						<div class="space-y-1">
+							<h2 class="text-lg font-bold">Drag files here or browse</h2>
+							<p class="text-sm text-muted-foreground">Multiple files supported · Maximum 10 GB per file</p>
+						</div>
 					</div>
 				</div>
 			</div>
+
 			<!-- Upload Queue -->
 			<div id="upload-queue-container" class="hidden space-y-4">
 				<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-					<h3 class="text-sm font-semibold leading-none tracking-tight">Upload Queue</h3>
+					<h3 class="text-lg font-bold">Upload queue</h3>
 					<div class="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap sm:justify-end">
 						<span id="upload-status-text" class="text-xs text-muted-foreground">0 of 0 uploaded</span>
 						<a href="/" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-8 px-3 py-1">
@@ -40,8 +66,9 @@ templ Upload() {
 						</a>
 					</div>
 				</div>
-				<div id="upload-queue-list" class="space-y-2"></div>
+				<div id="upload-queue-list" class="rounded-2xl border divide-y divide-border overflow-hidden bg-card"></div>
 			</div>
+
 			<div class="flex justify-center">
 				<a href="/" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground h-9 px-4 py-2">
 					@icons.ArrowLeft(templ.Attributes{"class": "h-4 w-4"})

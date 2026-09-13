@@ -11,29 +11,66 @@ import (
 )
 
 const createJob = `-- name: CreateJob :exec
-INSERT INTO jobs (id, file_id, task_type, status) VALUES (?, ?, ?, 'pending')
+INSERT INTO jobs (id, file_id, user_id, task_type, status, progress) VALUES (?, ?, ?, ?, 'pending', 0)
 `
 
 type CreateJobParams struct {
 	ID       string
-	FileID   string
+	FileID   sql.NullString
+	UserID   sql.NullString
 	TaskType string
 }
 
 func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) error {
-	_, err := q.db.ExecContext(ctx, createJob, arg.ID, arg.FileID, arg.TaskType)
+	_, err := q.db.ExecContext(ctx, createJob,
+		arg.ID,
+		arg.FileID,
+		arg.UserID,
+		arg.TaskType,
+	)
 	return err
 }
 
+const getJobByID = `-- name: GetJobByID :one
+SELECT id, COALESCE(file_id, ''), COALESCE(user_id, ''), task_type, status, progress, COALESCE(error, '') FROM jobs WHERE id = ?
+`
+
+type GetJobByIDRow struct {
+	ID       string
+	FileID   string
+	UserID   string
+	TaskType string
+	Status   string
+	Progress int64
+	Error    string
+}
+
+func (q *Queries) GetJobByID(ctx context.Context, id string) (GetJobByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getJobByID, id)
+	var i GetJobByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.FileID,
+		&i.UserID,
+		&i.TaskType,
+		&i.Status,
+		&i.Progress,
+		&i.Error,
+	)
+	return i, err
+}
+
 const getPendingOrProcessingJobs = `-- name: GetPendingOrProcessingJobs :many
-SELECT id, file_id, task_type, status, COALESCE(error, '') FROM jobs WHERE status IN ('pending', 'processing')
+SELECT id, COALESCE(file_id, ''), COALESCE(user_id, ''), task_type, status, progress, COALESCE(error, '') FROM jobs WHERE status IN ('pending', 'processing')
 `
 
 type GetPendingOrProcessingJobsRow struct {
 	ID       string
 	FileID   string
+	UserID   string
 	TaskType string
 	Status   string
+	Progress int64
 	Error    string
 }
 
@@ -49,8 +86,10 @@ func (q *Queries) GetPendingOrProcessingJobs(ctx context.Context) ([]GetPendingO
 		if err := rows.Scan(
 			&i.ID,
 			&i.FileID,
+			&i.UserID,
 			&i.TaskType,
 			&i.Status,
+			&i.Progress,
 			&i.Error,
 		); err != nil {
 			return nil, err
@@ -64,6 +103,65 @@ func (q *Queries) GetPendingOrProcessingJobs(ctx context.Context) ([]GetPendingO
 		return nil, err
 	}
 	return items, nil
+}
+
+const listActiveJobsByUser = `-- name: ListActiveJobsByUser :many
+SELECT id, COALESCE(file_id, ''), COALESCE(user_id, ''), task_type, status, progress, COALESCE(error, '') FROM jobs WHERE user_id = ? AND status IN ('pending', 'processing')
+`
+
+type ListActiveJobsByUserRow struct {
+	ID       string
+	FileID   string
+	UserID   string
+	TaskType string
+	Status   string
+	Progress int64
+	Error    string
+}
+
+func (q *Queries) ListActiveJobsByUser(ctx context.Context, userID sql.NullString) ([]ListActiveJobsByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listActiveJobsByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListActiveJobsByUserRow
+	for rows.Next() {
+		var i ListActiveJobsByUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FileID,
+			&i.UserID,
+			&i.TaskType,
+			&i.Status,
+			&i.Progress,
+			&i.Error,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateJobProgress = `-- name: UpdateJobProgress :exec
+UPDATE jobs SET progress = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+`
+
+type UpdateJobProgressParams struct {
+	Progress int64
+	ID       string
+}
+
+func (q *Queries) UpdateJobProgress(ctx context.Context, arg UpdateJobProgressParams) error {
+	_, err := q.db.ExecContext(ctx, updateJobProgress, arg.Progress, arg.ID)
+	return err
 }
 
 const updateJobStatus = `-- name: UpdateJobStatus :exec

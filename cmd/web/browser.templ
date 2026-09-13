@@ -75,7 +75,7 @@ templ Browser(currentPage string) {
 					<h3 class="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-300 uppercase">Folders</h3>
 					<span id="folder-count" class="text-xs text-muted-foreground tabular-nums"></span>
 				</div>
-				<div id="folder-grid" class="grid grid-cols-1 gap-3.5 min-[480px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
+				<div id="folder-grid" class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] gap-4"></div>
 			</div>
 
 			<!-- Files Section -->
@@ -84,7 +84,7 @@ templ Browser(currentPage string) {
 					<h3 class="text-sm font-semibold tracking-wide text-slate-700 dark:text-slate-300 uppercase">Files</h3>
 					<span id="file-items-count" class="text-xs text-muted-foreground tabular-nums"></span>
 				</div>
-				<div id="file-grid" class="grid grid-cols-1 gap-3.5 min-[480px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-4"></div>
+				<div id="file-grid" class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-4"></div>
 				<div id="file-list" class="hidden rounded-2xl border border-border dark:border-slate-800 bg-card text-card-foreground shadow-sm divide-y divide-border/60"></div>
 			</div>
 		</div>

@@ -7,6 +7,8 @@ function initUploadPage() {
         loadFolderOptions(folderSelect);
     }
 
+    initDownloadURL();
+
     if (!dropzone || !fileInput) return;
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -20,6 +22,10 @@ function initUploadPage() {
 
     ['dragleave', 'drop'].forEach(eventName => {
         dropzone.classList.remove('border-primary', 'bg-muted/50');
+    });
+
+    dropzone.addEventListener('click', () => {
+        fileInput.click();
     });
 
     dropzone.addEventListener('drop', (e) => {
@@ -177,4 +183,178 @@ function formatSize(bytes) {
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function initDownloadURL() {
+    const btn = document.getElementById('download-url-btn');
+    const input = document.getElementById('download-url-input');
+    const qualitySelect = document.getElementById('download-quality-select');
+    const folderSelect = document.getElementById('upload-folder-select');
+    const statusEl = document.getElementById('download-url-status');
+
+    if (!btn || !input) return;
+
+    btn.addEventListener('click', async () => {
+        const url = input.value.trim();
+        if (!url) {
+            if (statusEl) {
+                statusEl.textContent = 'Please enter a valid URL';
+                statusEl.className = 'text-xs font-medium text-destructive';
+                statusEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        const quality = qualitySelect ? qualitySelect.value : 'best';
+        const folder = folderSelect ? folderSelect.value : '/';
+
+        btn.disabled = true;
+        if (statusEl) {
+            statusEl.textContent = 'Starting download...';
+            statusEl.className = 'text-xs font-medium text-muted-foreground';
+            statusEl.classList.remove('hidden');
+        }
+
+        const queueContainer = document.getElementById('upload-queue-container');
+        const queueList = document.getElementById('upload-queue-list');
+        if (queueContainer) queueContainer.classList.remove('hidden');
+
+        totalUploads++;
+        const itemId = 'url-item-' + Date.now();
+        if (queueList) {
+            queueList.insertAdjacentHTML('beforeend',
+                '<div id="' + itemId + '" class="space-y-3 rounded-xl border bg-card p-3 text-card-foreground shadow-sm sm:p-4"><div class="flex min-w-0 flex-col gap-2 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between"><div class="flex min-w-0 items-center gap-3"><div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></div><div class="min-w-0"><h4 class="truncate text-sm font-medium">' + escapeHtml(url) + '</h4><p class="text-xs text-muted-foreground">Quality: ' + escapeHtml(quality) + ' (yt-dlp)</p></div></div><span id="' + itemId + '-status" class="self-start text-xs font-medium text-amber-600 dark:text-amber-400 min-[400px]:self-auto">0%</span></div><div class="h-1.5 w-full overflow-hidden rounded-full bg-primary/20"><div id="' + itemId + '-progress" class="h-full w-0 rounded-full bg-primary transition-all duration-300"></div></div></div>'
+            );
+        }
+        updateUploadStatus();
+
+        const itemStatusEl = document.getElementById(itemId + '-status');
+        const itemProgressEl = document.getElementById(itemId + '-progress');
+
+        try {
+            const res = await fetch('/api/file/download-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ url, quality, folder })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                input.value = '';
+                if (data.job_id) {
+                    pollJobStatus(data.job_id, itemStatusEl, itemProgressEl, statusEl, () => {
+                        uploadedCount++;
+                        updateUploadStatus();
+                    });
+                } else {
+                    uploadedCount++;
+                    updateUploadStatus();
+                }
+            } else if (res.status === 401) {
+                window.location.href = '/sign-in';
+            } else {
+                let errText = 'Failed to start download';
+                try {
+                    const r = await res.json();
+                    if (r.error) errText = r.error;
+                } catch (e) {}
+                if (statusEl) {
+                    statusEl.textContent = errText;
+                    statusEl.className = 'text-xs font-medium text-destructive';
+                    statusEl.classList.remove('hidden');
+                }
+                if (itemStatusEl) {
+                    itemStatusEl.textContent = errText;
+                    itemStatusEl.className = 'text-xs font-medium text-destructive';
+                }
+                if (itemProgressEl) {
+                    itemProgressEl.className = 'h-full rounded-full bg-destructive transition-all duration-300';
+                }
+                uploadedCount++;
+                updateUploadStatus();
+            }
+        } catch (e) {
+            if (statusEl) {
+                statusEl.textContent = 'Network error';
+                statusEl.className = 'text-xs font-medium text-destructive';
+                statusEl.classList.remove('hidden');
+            }
+            if (itemStatusEl) {
+                itemStatusEl.textContent = 'Network error';
+                itemStatusEl.className = 'text-xs font-medium text-destructive';
+            }
+            if (itemProgressEl) {
+                itemProgressEl.className = 'h-full rounded-full bg-destructive transition-all duration-300';
+            }
+            uploadedCount++;
+            updateUploadStatus();
+        } finally {
+            btn.disabled = false;
+        }
+    });
+}
+
+function pollJobStatus(jobId, itemStatusEl, itemProgressEl, statusEl, onFinished) {
+    let finished = false;
+    const interval = setInterval(async () => {
+        if (finished) return;
+        try {
+            const res = await fetch('/api/file/jobs/' + jobId, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            if (!res.ok) return;
+            const job = await res.json();
+
+            if (job.status === 'processing' || job.status === 'pending') {
+                const pct = job.progress || 0;
+                if (itemProgressEl) itemProgressEl.style.width = pct + '%';
+                if (itemStatusEl) {
+                    itemStatusEl.textContent = pct + '%';
+                    itemStatusEl.className = 'text-xs font-medium text-amber-600 dark:text-amber-400';
+                }
+                if (statusEl) {
+                    statusEl.textContent = 'Downloading... ' + pct + '%';
+                    statusEl.className = 'text-xs font-medium text-muted-foreground';
+                    statusEl.classList.remove('hidden');
+                }
+            } else if (job.status === 'completed') {
+                finished = true;
+                clearInterval(interval);
+                if (itemProgressEl) {
+                    itemProgressEl.style.width = '100%';
+                    itemProgressEl.className = 'h-full rounded-full bg-emerald-500 transition-all duration-300';
+                }
+                if (itemStatusEl) {
+                    itemStatusEl.textContent = 'Done';
+                    itemStatusEl.className = 'text-xs font-medium text-emerald-600 dark:text-emerald-400';
+                }
+                if (statusEl) {
+                    statusEl.textContent = 'Download completed successfully!';
+                    statusEl.className = 'text-xs font-medium text-emerald-600 dark:text-emerald-400';
+                    statusEl.classList.remove('hidden');
+                }
+                if (typeof onFinished === 'function') onFinished();
+                document.body.dispatchEvent(new CustomEvent('mediaUpdated'));
+            } else if (job.status === 'failed') {
+                finished = true;
+                clearInterval(interval);
+                if (itemProgressEl) {
+                    itemProgressEl.className = 'h-full rounded-full bg-destructive transition-all duration-300';
+                }
+                const err = job.error || 'Download failed';
+                if (itemStatusEl) {
+                    itemStatusEl.textContent = 'Failed';
+                    itemStatusEl.className = 'text-xs font-medium text-destructive';
+                }
+                if (statusEl) {
+                    statusEl.textContent = err;
+                    statusEl.className = 'text-xs font-medium text-destructive';
+                    statusEl.classList.remove('hidden');
+                }
+                if (typeof onFinished === 'function') onFinished();
+            }
+        } catch (e) {}
+    }, 1500);
 }

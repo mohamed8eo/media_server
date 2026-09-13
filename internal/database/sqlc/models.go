@@ -32,12 +32,14 @@ type Folder struct {
 
 type Job struct {
 	ID        string
-	FileID    string
+	FileID    sql.NullString
 	TaskType  string
 	Status    string
+	Progress  int64
 	Error     sql.NullString
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
+	UserID    sql.NullString
 }
 
 type RefreshToken struct {

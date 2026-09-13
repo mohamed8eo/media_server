@@ -59,6 +59,8 @@ func NewRouter(db database.Service) http.Handler {
 	r := chi.NewRouter()
 
 	r.Post("/", h.UploadHandler)
+	r.Post("/download-url", h.DownloadURLHandler)
+	r.Get("/jobs/{id}", h.GetJobHandler)
 	r.Get("/", h.ListHandler)
 	r.Post("/mkdir", h.MkdirHandler)
 	r.Get("/trash", h.TrashHandler)
@@ -211,7 +213,7 @@ func (h *FileHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	if strings.HasPrefix(mimeType, "video/") {
 		jobID := uuid.New()
-		_ = h.db.CreateJob(jobID, fileID, "media_fix")
+		_ = h.db.CreateJob(jobID, fileID, userID, "media_fix")
 		h.audioPool.Submit(func() {
 			_ = h.db.UpdateJobStatus(jobID, "processing", "")
 			if err := h.fixMediaIfNeeded(fileID, destPath, mimeType); err != nil {
@@ -362,6 +364,7 @@ func (h *FileHandler) MkdirHandler(w http.ResponseWriter, r *http.Request) {
 type ListResponse struct {
 	Files   []models.File   `json:"files"`
 	Folders []models.Folder `json:"folders"`
+	Jobs    []database.Job  `json:"jobs"`
 }
 
 func (h *FileHandler) ListHandler(w http.ResponseWriter, r *http.Request) {
@@ -383,9 +386,15 @@ func (h *FileHandler) ListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	jobs, err := h.db.ListActiveJobsByUser(userID)
+	if err != nil {
+		jobs = []database.Job{}
+	}
+
 	utils.RespondWithJSON(w, http.StatusOK, ListResponse{
 		Files:   files,
 		Folders: folders,
+		Jobs:    jobs,
 	})
 }
 

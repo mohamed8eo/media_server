@@ -1,6 +1,7 @@
 let allFiles = [];
 let allFolders = ['/'];
 let folderItems = [];
+let allJobs = [];
 let selectedItems = new Set();
 let selectionAnchor = null;
 let isTrashView = new URLSearchParams(window.location.search).get('trash') === '1';
@@ -46,6 +47,27 @@ function initFileBrowser() {
 }
 
 function itemKey(kind, id) { return kind + ':' + id; }
+
+const GRADIENT_PALETTE = [
+    'from-blue-500 to-cyan-400',
+    'from-red-500 to-orange-400',
+    'from-emerald-500 to-green-400',
+    'from-purple-500 to-fuchsia-400',
+    'from-amber-500 to-yellow-400',
+    'from-pink-500 to-rose-400',
+    'from-cyan-500 to-sky-400',
+    'from-indigo-500 to-violet-400',
+];
+
+function gradientForKey(key) {
+    let hash = 0;
+    const str = String(key || '');
+    for (let i = 0; i < str.length; i++) {
+        hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+    }
+    return GRADIENT_PALETTE[hash % GRADIENT_PALETTE.length];
+}
+
 function visibleItems() { return [...getFoldersInFolder(currentFolder).map(p => ({kind:'folder',id:(folderItems.find(f=>f.path===p)||{}).id})).filter(x=>x.id), ...getFilesInFolder(currentFolder).map(f=>({kind:'file',id:f.id}))]; }
 function toggleSelection(kind,id,checked,shift) { const items=visibleItems(),key=itemKey(kind,id),i=items.findIndex(x=>itemKey(x.kind,x.id)===key); if(shift&&selectionAnchor!==null&&i>=0){const [a,b]=[Math.min(selectionAnchor,i),Math.max(selectionAnchor,i)];items.slice(a,b+1).forEach(x=>checked?selectedItems.add(itemKey(x.kind,x.id)):selectedItems.delete(itemKey(x.kind,x.id)));}else{checked?selectedItems.add(key):selectedItems.delete(key);selectionAnchor=i;}renderAll(); }
 function clearSelection(){selectedItems.clear();selectionAnchor=null;renderAll();}
@@ -145,20 +167,17 @@ function renderFolderCard(folder) {
     const count = getFolderItemCount(folder);
     const folderId = (folderItems.find(f => f.path === folder) || {}).id;
     const checked = folderId && selectedItems.has(itemKey('folder', folderId)) ? 'checked' : '';
-    return `<div data-folder-path="${escapeHtml(folder)}" class="group relative cursor-pointer rounded-2xl border bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800 text-card-foreground p-4 hover:shadow-md hover:border-indigo-500/50 transition-all duration-200 flex items-center justify-between folder-card">
+    return `<div data-folder-path="${escapeHtml(folder)}" class="group relative cursor-pointer rounded-xl border bg-card border-border text-card-foreground p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 flex items-center justify-between folder-card">
 		${folderId ? `<input type="checkbox" data-select-kind="folder" data-select-id="${folderId}" ${checked} class="absolute left-3 top-3 h-4 w-4 z-10" />` : ''}
         <div class="flex items-center gap-3.5 min-w-0">
-            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm">
-                <svg class="h-5 w-5 fill-indigo-500/20" fill="currentColor" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M2.75 12.75V12A2.25 2.25 0 0 1 5 9.75h14A2.25 2.25 0 0 1 21.25 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/></svg>
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent text-primary">
+                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M2.75 12.75V12A2.25 2.25 0 0 1 5 9.75h14A2.25 2.25 0 0 1 21.25 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/></svg>
             </div>
             <div class="min-w-0">
                 <h4 class="text-sm font-semibold truncate text-slate-900 dark:text-slate-100" title="${escapeHtml(folder)}">${escapeHtml(name)}</h4>
-                <p class="text-xs text-slate-500 dark:text-slate-400">Folder</p>
+                <p class="text-xs text-muted-foreground">${count} items</p>
             </div>
         </div>
-        <span class="inline-flex items-center rounded-full bg-slate-200/70 dark:bg-slate-800 px-3 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 tabular-nums shrink-0">
-            ${count} item${count !== 1 ? 's' : ''}
-        </span>
     </div>`;
 }
 
@@ -323,10 +342,10 @@ function renderFiles() {
         return 0;
     });
 
-    const totalCount = folders.length + files.length;
+    const totalCount = folders.length + files.length + allJobs.length;
     if (fileCountEl) fileCountEl.textContent = totalCount + ' item' + (totalCount !== 1 ? 's' : '');
     if (folderCountEl) folderCountEl.textContent = folders.length + ' folder' + (folders.length !== 1 ? 's' : '');
-    if (fileItemsCountEl) fileItemsCountEl.textContent = files.length + ' file' + (files.length !== 1 ? 's' : '');
+    if (fileItemsCountEl) fileItemsCountEl.textContent = (files.length + allJobs.length) + ' file' + ((files.length + allJobs.length) !== 1 ? 's' : '');
 
     if (totalCount === 0) {
         if (emptyEl) emptyEl.classList.remove('hidden');
@@ -359,11 +378,13 @@ function renderFiles() {
         if (folderGridEl) folderGridEl.innerHTML = '';
     }
 
-    if (files.length > 0) {
+    if (files.length > 0 || allJobs.length > 0) {
         if (fileSectionEl) fileSectionEl.classList.remove('hidden');
         const foldersListHtml = folders.map(f => renderFolderRow(f)).join('');
-        const filesHtml = files.map(f => renderGridCard(f)).join('');
-        const filesListHtml = files.map(f => renderListRow(f)).join('');
+        const jobsHtml = allJobs.map(j => renderJobCard(j)).join('');
+        const jobsListHtml = allJobs.map(j => renderJobRow(j)).join('');
+        const filesHtml = jobsHtml + files.map(f => renderGridCard(f)).join('');
+        const filesListHtml = jobsListHtml + files.map(f => renderListRow(f)).join('');
 
         if (gridEl) {
             gridEl.innerHTML = filesHtml;
@@ -420,21 +441,15 @@ function renderGridCard(f) {
     const badge = getTypeBadge(f.mime_type);
     const displayName = getCleanName(f.filename);
     const actions = getFileActions(f);
-    const cat = getCategoryFromMime(f.mime_type);
-
-    let extraBadge = '';
-    if (cat === 'document') {
-        extraBadge = `<span class="inline-flex items-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase">${formatSize(f.size)}</span>`;
-    }
 
     return `<div data-file-id="${f.id}" 
         x-data="{ showActions: window.matchMedia('(hover: none)').matches, menuOpen: false }"
         @mouseenter="showActions = true"
         @mouseleave="if (!menuOpen) showActions = false"
-        class="relative group rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-200 flex flex-col w-full cursor-pointer"
+        class="bg-card border border-border shadow-sm group relative min-w-0 overflow-hidden rounded-xl cursor-pointer"
         :class="menuOpen ? 'z-50 relative' : 'z-10 relative'">
         <input type="checkbox" data-select-kind="file" data-select-id="${f.id}" ${selectedItems.has(itemKey('file', f.id)) ? 'checked' : ''} class="absolute left-3 top-3 z-30 h-4 w-4" />
-        <div class="aspect-video relative rounded-t-2xl overflow-hidden bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center">
+        <div class="aspect-[16/10] relative overflow-hidden flex items-center justify-center">
             ${thumbHtml}
             <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
         </div>
@@ -446,17 +461,15 @@ function renderGridCard(f) {
             class="absolute right-2 top-2 z-30 flex max-w-[calc(100%-1rem)] items-center gap-1 overflow-x-auto rounded-xl border border-border bg-background/90 p-1 shadow-lg backdrop-blur-md scrollbar-none dark:border-slate-800 dark:bg-slate-900/90">
             ${actions}
         </div>
-        <div class="p-3.5 space-y-2 flex-1 flex flex-col justify-between">
-            <div class="space-y-1">
-                <div class="flex items-center gap-2">
-                    <span class="inline-flex items-center rounded-md bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shrink-0">${badge}</span>
-                    <h4 class="text-sm font-medium leading-snug truncate text-slate-900 dark:text-slate-100" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
+        <div class="p-4 space-y-1">
+            <div class="flex min-w-0 items-start justify-between gap-2">
+                <div class="min-w-0">
+                    <h4 class="text-sm font-semibold truncate text-slate-900 dark:text-slate-100" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
+                    <p class="mt-1 truncate text-xs text-muted-foreground">${formatSize(f.size)} &middot; ${formatDate(f.created_at)}</p>
                 </div>
+                <span class="shrink-0 rounded-md bg-accent px-2 py-1 text-[10px] font-bold text-accent-foreground">${badge}</span>
             </div>
-            <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-border/60">
-                <span class="tabular-nums">${formatSize(f.size)}</span>
-                <span class="tabular-nums">${formatDate(f.created_at)}</span>
-            </div>
+            <p class="mt-3 truncate text-xs text-muted-foreground">MediaVault ${escapeHtml(normalizeFolder(f.folder || '/').replace(/^\//, '/ ').replace(/\//g, ' / '))}</p>
         </div>
     </div>`;
 }
@@ -471,25 +484,23 @@ function renderListRow(f) {
         x-data="{ showActions: window.matchMedia('(hover: none)').matches, menuOpen: false }"
         @mouseenter="showActions = true"
         @mouseleave="if (!menuOpen) showActions = false"
-        class="relative group flex min-w-0 items-center gap-2 px-3 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40 sm:gap-4 sm:px-4 cursor-pointer border-b border-border dark:border-slate-800/60 last:border-0"
+        class="relative group flex min-w-0 items-center gap-3 px-3 py-3 transition-colors hover:bg-accent/50 sm:gap-4 sm:px-4 cursor-pointer border-b border-border/70 dark:border-slate-800/60 last:border-0"
         :class="menuOpen ? 'z-50 relative' : 'z-0 relative'">
-        <input type="checkbox" data-select-kind="file" data-select-id="${f.id}" ${selectedItems.has(itemKey('file', f.id)) ? 'checked' : ''} class="h-4 w-4 shrink-0" />
-        <div class="w-11 h-11 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900/60 shrink-0 flex items-center justify-center border border-border dark:border-slate-800">
+        <input type="checkbox" data-select-kind="file" data-select-id="${f.id}" ${selectedItems.has(itemKey('file', f.id)) ? 'checked' : ''} class="h-4 w-4 shrink-0 rounded accent-primary" />
+        <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
             ${thumbHtml}
         </div>
         <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2">
-                <h4 class="text-sm font-medium truncate text-slate-900 dark:text-slate-100" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
-                <span class="inline-flex items-center rounded-md bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider shrink-0">${badge}</span>
-            </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400 truncate tabular-nums">${formatSize(f.size)} <span class="hidden sm:inline">&middot; ${formatDate(f.created_at)}</span></p>
+            <h4 class="text-sm font-semibold truncate text-slate-900 dark:text-slate-100" title="${escapeHtml(f.filename)}">${escapeHtml(displayName)}</h4>
+            <p class="mt-0.5 text-xs text-muted-foreground truncate tabular-nums">${formatSize(f.size)} <span class="hidden sm:inline">&middot; ${formatDate(f.created_at)}</span></p>
         </div>
+        <span class="hidden shrink-0 rounded-md bg-accent px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground sm:inline-flex">${badge}</span>
         <div 
             x-show="showActions || menuOpen"
             x-transition:enter="transition ease-out duration-150"
             x-transition:enter-start="opacity-0 translate-y-1"
             x-transition:enter-end="opacity-100 translate-y-0"
-            class="z-30 flex shrink-0 items-center gap-1 sm:gap-1.5">
+            class="z-30 flex shrink-0 items-center gap-0.5 sm:gap-1">
             ${actions}
         </div>
     </div>`;
@@ -504,10 +515,11 @@ function getThumbnailHtml(f) {
         return `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=getFallbackIcon('${f.mime_type}')" /><div class="absolute inset-0 flex items-center justify-center"><div class="flex h-12 w-12 items-center justify-center rounded-full bg-black/60 backdrop-blur-md shadow-lg text-white"><svg class="h-6 w-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`;
     }
     if (cat === 'document') {
-        // Document / PDF stylized preview card with thumbnail or document badge
-        return `<div class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400 p-4 text-center">
-            <svg class="h-10 w-10 mb-1" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">${getTypeBadge(f.mime_type)}</span>
+        // Document / PDF stylized preview card with a deterministic color gradient
+        const gradient = gradientForKey(f.id);
+        return `<div class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br ${gradient} text-white p-4 text-center gap-1.5">
+            <svg class="h-10 w-10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-black/20 backdrop-blur-sm">${getTypeBadge(f.mime_type)}</span>
         </div>`;
     }
     return `<div class="w-full h-full flex items-center justify-center">${getFallbackIcon(f.mime_type)}</div>`;
@@ -516,13 +528,27 @@ function getThumbnailHtml(f) {
 function getThumbnailHtmlSmall(f) {
     const cat = getCategoryFromMime(f.mime_type);
     if (cat === 'image' || cat === 'video') {
-        return `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=getFallbackIconSm('${f.mime_type}')" />`;
+        return `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=getColorFallbackSm('${f.id}','${f.mime_type}')" />`;
     }
-    if (cat === 'document') {
-        return `<div class="w-full h-full flex items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-400"><svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>`;
-    }
-    return `<div class="w-full h-full flex items-center justify-center">${getFallbackIconSm(f.mime_type)}</div>`;
+    return getColorFallbackSm(f.id, f.mime_type);
 }
+
+window.getColorIconSm = function(mime) {
+    const cat = getCategoryFromMime(mime);
+    const icons = {
+        video: '<svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.777-.416L16 11"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>',
+        image: '<svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+        audio: '<svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+        document: '<svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>',
+        other: '<svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    };
+    return icons[cat] || icons.other;
+};
+
+window.getColorFallbackSm = function(fileId, mime) {
+    const gradient = gradientForKey(fileId);
+    return `<div class="w-full h-full flex items-center justify-center bg-gradient-to-br ${gradient}">${getColorIconSm(mime)}</div>`;
+};
 
 window.getFallbackIcon = function(mime) {
     const cat = getCategoryFromMime(mime);
@@ -573,18 +599,22 @@ function getFileActions(f) {
 
 function getFileActionsInline(f) {
     const cat = getCategoryFromMime(f.mime_type);
+    const btnCls = 'inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-foreground h-8 w-8';
     let html = '';
     if (cat === 'video' || cat === 'image' || cat === 'document') {
-        html += `<button data-action="play" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8"><svg class="h-4 w-4 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>`;
+        html += `<button data-action="play" class="${btnCls} hidden sm:inline-flex"><svg class="h-4 w-4 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>`;
     }
-    html += `<button data-action="download" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8"><svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
-    html += `<button data-action="move" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8"><svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" x2="12" y1="11" y2="17"/><line x1="9" x2="15" y1="14" y2="14"/></svg></button>`;
-    
+    html += `<button data-action="download" class="${btnCls} hidden sm:inline-flex"><svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
+    html += `<button data-action="move" class="${btnCls} hidden sm:inline-flex"><svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" x2="12" y1="11" y2="17"/><line x1="9" x2="15" y1="14" y2="14"/></svg></button>`;
+
     html += `<div data-dropdown-menu class="relative">
-        <button data-action="more" @click="menuOpen = !menuOpen" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8">
+        <button data-action="more" @click="menuOpen = !menuOpen" class="${btnCls}">
             <svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
-        <div x-show="menuOpen" @click.outside="menuOpen = false; showActions = false" x-transition class="absolute right-0 bottom-full mb-2 sm:bottom-auto sm:top-full sm:mt-1 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-2xl py-1.5 z-[100] text-xs font-medium">
+        <div x-show="menuOpen" @click.outside="menuOpen = false; showActions = false" x-transition class="absolute right-0 bottom-full mb-2 sm:bottom-auto sm:top-full sm:mt-1 w-44 rounded-xl bg-card border border-border dark:border-slate-800 shadow-2xl py-1.5 z-[100] text-xs font-medium">
+            <button data-action="play" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2 sm:hidden">Open</button>
+            <button data-action="download" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2 sm:hidden">Download</button>
+            <button data-action="move" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2 sm:hidden">Move</button>
             <button data-action="info" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
             <button data-action="delete" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
         </div>
@@ -883,10 +913,14 @@ async function fetchFiles() {
             allFiles = data.files || [];
             folderItems = (data.folders || []).map(x => typeof x === 'string' ? {id: x, path: x} : x);
             allFolders = folderItems.map(x => x.path);
+            allJobs = data.jobs || [];
         }
         if (!allFolders.includes('/')) allFolders.unshift('/');
         if (loadingEl) loadingEl.classList.add('hidden');
         renderAll();
+        if (allJobs.length > 0) {
+            setTimeout(() => { fetchFiles(); }, 2000);
+        }
     } catch (err) {
         console.error(err);
         if (allFiles.length === 0 && loadingEl) {
@@ -998,4 +1032,40 @@ function formatSize(bytes) {
 function formatDate(dateStr) {
     if (!dateStr) return '';
     return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function renderJobCard(j) {
+    const pct = j.progress || 0;
+    return `<div class="relative group rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm flex flex-col w-full p-5 space-y-4">
+        <div class="flex items-center justify-between">
+            <span class="inline-flex items-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 text-xs font-semibold uppercase">Downloading (${j.task_type})</span>
+            <span class="text-xs font-bold tabular-nums text-muted-foreground">${pct}%</span>
+        </div>
+        <div class="space-y-1">
+            <h4 class="text-sm font-medium truncate">URL Download in progress...</h4>
+            <p class="text-xs text-muted-foreground capitalize">Status: ${j.status}</p>
+        </div>
+        <div class="h-1.5 w-full overflow-hidden rounded-full bg-primary/20">
+            <div class="h-full rounded-full bg-primary transition-all duration-300" style="width: ${pct}%"></div>
+        </div>
+    </div>`;
+}
+
+function renderJobRow(j) {
+    const pct = j.progress || 0;
+    return `<div class="flex items-center justify-between p-4">
+        <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-xs">${pct}%</div>
+            <div>
+                <h4 class="text-sm font-medium">URL Download (${j.task_type}) - ${j.status}</h4>
+                <p class="text-xs text-muted-foreground">Background yt-dlp task</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="w-32 h-1.5 overflow-hidden rounded-full bg-primary/20">
+                <div class="h-full rounded-full bg-primary transition-all duration-300" style="width: ${pct}%"></div>
+            </div>
+            <span class="text-xs font-bold tabular-nums text-muted-foreground w-8 text-right">${pct}%</span>
+        </div>
+    </div>`;
 }

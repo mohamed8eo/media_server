@@ -54,7 +54,6 @@ func (s *Server) RegisterUIRoutes(r chi.Router) {
 }
 
 func (s *Server) RegisterAPIRoutes(r chi.Router) {
-	r.Get("/", s.HelloWorldHandler)
 	r.Get("/health", s.healthHandler)
 	r.Mount("/auth", auth.NewRouter(s.db))
 

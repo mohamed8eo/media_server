@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -47,20 +46,6 @@ func (s *Server) WatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	templ.Handler(web.Watch(*file)).ServeHTTP(w, r)
-}
-
-func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
-	resp := make(map[string]string)
-	resp["message"] = "Hello World"
-
-	jsonResp, err := json.Marshal(resp)
-	if err != nil {
-		slog.Error("error handling JSON marshal", "error", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	_, _ = w.Write(jsonResp)
 }
 
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {

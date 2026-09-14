@@ -58,7 +58,7 @@ templ Browser(currentPage string) {
 				<h3 class="mt-4 text-lg font-semibold text-slate-900 dark:text-slate-100">No media here yet</h3>
 				<p class="mb-6 mt-1.5 text-sm text-muted-foreground max-w-sm">Upload files or create a subfolder to organize your media library.</p>
 				<div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-3">
-					<a href="/upload" class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90">
+					<a href="/upload?folder={{currentFolder}}" class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90">
 						@icons.Upload(templ.Attributes{"class": "h-4 w-4"})
 						Upload Files
 					</a>

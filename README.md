@@ -1,95 +1,104 @@
-# Project mediaserver
+# MediaServer
 
-MediaServer is a self-hosted media library. For a portable Docker deployment on
-an external SSD, use the included `mediaserver` CLI. It stores the SQLite
-database and uploaded media together on the configured SSD path.
+Self-hosted media library management system. Browse, stream, and organize your media collection with a modern web interface.
 
-## SSD Docker deployment
+## Features
 
-The default project location is `/mnt/mediaserver-ssd/mediaserver` and the
-default persistent-data directory is `data/` inside it. Install the manager
-from the project root, then run the one-time setup:
+- **Upload & download** files and folders with drag-and-drop friendly HX triggers
+- **YouTube & URL downloads** via yt-dlp
+- **Media transcoding** — automatic thumbnail generation with ffmpeg/pdftoppm
+- **Folder organization** with hierarchical nesting and rename/move operations
+- **Trash & recycle bin** — soft delete with purge retention
+- **Storage quotas** and usage statistics per user
+- **JWT authentication** — access tokens (15 min) + refresh tokens (7 days)
+- **HTMX-powered UI** — partial updates without full page reloads
+- **Responsive design** — TailwindCSS + AlpineJS
 
-```bash
-go install ./cmd/mediaserver
-mediaserver setup
-```
+## Quick Start
 
-Use another location or port during setup when needed:
-
-```bash
-mediaserver setup --project-dir /mnt/mediaserver-ssd/mediaserver \
-  --data-path /mnt/mediaserver-ssd/media-data --port 8080
-```
-
-The CLI saves non-secret deployment settings in
-`~/.config/mediaserver/config.json`. Application secrets remain in `.env`.
+### Local development
 
 ```bash
-mediaserver start
-mediaserver stop
-mediaserver status
-mediaserver update                 # clean tree only: pull, rebuild, restart
-mediaserver config get
-mediaserver config set port 9090
-mediaserver config set data-path /mnt/mediaserver-ssd/media-data
-mediaserver autostart enable
-mediaserver autostart disable
-mediaserver remove                 # keeps database and uploads
-mediaserver remove --purge-data --force
+# 1. Install dependencies
+go install github.com/a-h/templ/cmd/templ@latest
+go install github.com/air-verse/air@latest
+
+# 2. Build and run
+make build   # generates templ, builds binary
+make run     # starts the API server
+
+# 3. Watch for live reload
+make watch   # starts Air
 ```
 
-`setup` installs a user systemd service that waits for both the SSD project
-and data mounts. Back up the configured data directory, especially `db/` and
-`storage/`, before moving or deleting the drive. `dockdb` is not used here:
-MediaServer uses SQLite, while DockDB manages PostgreSQL and MySQL containers.
+### First-time setup
 
-## Getting Started
-
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
-
-## MakeFile
-
-Run build make command with tests
 ```bash
-make all
+# Using the CLI
+mediaserver setup --project-dir /path/to/project \
+  --data-path /path/to/data --port 8080
+
+# Or via setup.sh
+./setup.sh /path/to/install/dir
 ```
 
-Build the application
+### Docker deployment (SSD)
+
 ```bash
-make build
+# From project root
+docker compose up --build
 ```
 
-Run the application
-```bash
-make run
-```
-Create DB container
-```bash
-make docker-run
-```
+MediaServer runs at `http://localhost:8080` (configurable via `PORT` env var).
 
-Shutdown DB Container
-```bash
-make docker-down
-```
+## CLI Reference
 
-DB Integrations Test:
-```bash
-make itest
-```
+| Command | Description |
+|---|---|
+| `mediaserver setup` | Install binary + config + apply migrations |
+| `mediaserver start` | Start Docker compose |
+| `mediaserver stop` | Stop Docker compose |
+| `mediaserver status` | Show status + autostart state |
+| `mediaserver update` | Git pull + rebuild + restart |
+| `mediaserver remove` | Remove Docker containers |
+| `mediaserver remove --purge-data --force` | Delete all persistent data |
+| `mediaserver config get` | Show current configuration |
+| `mediaserver config set port 9090` | Change port |
+| `mediaserver config set data-path /new/path` | Change data directory |
+| `mediaserver autostart enable/disable` | Systemd user service |
 
-Live reload the application:
-```bash
-make watch
-```
+See [`docs/cli-reference.md`](./docs/cli-reference.md) for full details.
 
-Run the test suite:
-```bash
-make test
-```
+## API Reference
 
-Clean up binary from the last build:
-```bash
-make clean
-```
+Full endpoint documentation available at [`docs/api-reference.md`](./docs/api-reference.md).
+
+Key endpoints:
+
+- `POST /` — Upload file
+- `GET /` — List files and folders
+- `GET /{id}` — Get file metadata
+- `DELETE /{id}` — Soft delete to trash
+- `POST /trash/restore` — Restore from trash
+- `POST /trash/purge` — Permanent deletion
+- `POST /download-url` — Add URL download (yt-dlp)
+- `GET /recent` — Recent uploads and playback
+- `GET /stats` — Storage statistics
+
+## Deployment
+
+- **Docker Compose** — `make docker-run` / `make docker-down`
+- **SSD portable** — Install via `mediaserver setup` or `./setup.sh`
+- **Systemd autostart** — `mediaserver autostart enable`
+- See [`docs/deployment.md`](./docs/deployment.md) for detailed guides.
+
+## Development
+
+- **Testing** — `make test` runs all tests
+- **Live reload** — `make watch` starts Air
+- **SQLC migrations** — `make sqlc` regenerates query code
+- See [`docs/development.md`](./docs/development.md) for architecture details.
+
+---
+
+*MediaServer is actively developed. Check the [issues](https://github.com/your-repo/issues) for roadmap.*

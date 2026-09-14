@@ -86,6 +86,7 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 		"--newline",
 		"--no-color",
 		"--progress",
+		"-N", "8", // download up to 8 fragments of the video concurrently
 		"-o", outputTemplate,
 	}
 

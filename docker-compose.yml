@@ -6,12 +6,13 @@ services:
       target: prod
     restart: unless-stopped
     ports:
-      - ${PORT:-8080}:${PORT:-8080}
+      - "8080:8080"
     environment:
       APP_ENV: ${APP_ENV:-local}
-      PORT: ${PORT:-8080}
+      PORT: "8080"
       BLUEPRINT_DB_URL: file:/app/db/mediaserver.db
       STORAGE_PATH: /app/storage
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
     volumes:
       - ${DATA_DIR:-./data}/db:/app/db
       - ${DATA_DIR:-./data}/storage:/app/storage

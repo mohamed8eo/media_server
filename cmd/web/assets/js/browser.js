@@ -1057,20 +1057,37 @@ async function fetchFiles() {
         const res = await fetch(isTrashView ? '/api/file/trash' : '/api/file/', { method: 'GET', credentials: 'include' });
         if (!res.ok) { if (res.status === 401) return; throw new Error('Failed to fetch files'); }
         const data = await res.json();
+        let filesChanged = false;
+        let jobsCountChanged = false;
         if (isTrashView) {
             const items = data.items || [];
-            allFiles = items.filter(x => x.kind === 'file').map(x => ({...x, filename:x.name, folder:'/', mime_type:'application/octet-stream', created_at:x.deleted_at}));
+            const newFiles = items.filter(x => x.kind === 'file').map(x => ({...x, filename:x.name, folder:'/', mime_type:'application/octet-stream', created_at:x.deleted_at}));
+            filesChanged = JSON.stringify(newFiles) !== JSON.stringify(allFiles);
+            allFiles = newFiles;
             folderItems = items.filter(x => x.kind === 'folder').map(x => ({...x, path:x.path}));
             allFolders = folderItems.map(x => x.path);
         } else {
-            allFiles = data.files || [];
-            folderItems = (data.folders || []).map(x => typeof x === 'string' ? {id: x, path: x} : x);
+            const newFiles = data.files || [];
+            const newFolders = (data.folders || []).map(x => typeof x === 'string' ? {id: x, path: x} : x);
+            const newJobs = data.jobs || [];
+
+            filesChanged = JSON.stringify(newFiles) !== JSON.stringify(allFiles) || JSON.stringify(newFolders) !== JSON.stringify(folderItems);
+            jobsCountChanged = newJobs.length !== allJobs.length;
+
+            allFiles = newFiles;
+            folderItems = newFolders;
             allFolders = folderItems.map(x => x.path);
-            allJobs = data.jobs || [];
+            allJobs = newJobs;
         }
         if (!allFolders.includes('/')) allFolders.unshift('/');
         if (loadingEl) loadingEl.classList.add('hidden');
-        renderAll();
+
+        if (filesChanged || jobsCountChanged || !document.querySelector('[data-job-id]')) {
+            renderAll();
+        } else {
+            updateJobsInPlace();
+        }
+
         if (allJobs.length > 0) {
             setTimeout(() => { fetchFiles(); }, 2000);
         }
@@ -1080,6 +1097,23 @@ async function fetchFiles() {
             loadingEl.innerHTML = '<p class="text-sm text-destructive font-medium">Failed to load files. Please refresh.</p>';
         }
     }
+}
+
+function updateJobsInPlace() {
+    allJobs.forEach(j => {
+        const pct = j.progress || 0;
+        document.querySelectorAll(`[data-job-id="${j.id}"]`).forEach(el => {
+            el.querySelectorAll('[data-job-progress-bar]').forEach(bar => {
+                bar.style.width = pct + '%';
+            });
+            el.querySelectorAll('[data-job-progress-text]').forEach(txt => {
+                txt.textContent = pct + '%';
+            });
+            el.querySelectorAll('[data-job-progress-badge]').forEach(badge => {
+                badge.textContent = pct + '%';
+            });
+        });
+    });
 }
 
 window.openFileById = function(fileId) {
@@ -1189,36 +1223,42 @@ function formatDate(dateStr) {
 
 function renderJobCard(j) {
     const pct = j.progress || 0;
-    return `<div class="relative group rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm flex flex-col w-full p-5 space-y-4">
+    const isMediaFix = j.task_type === 'media_fix';
+    const badgeText = isMediaFix ? 'Media Fix' : `Downloading (${j.task_type})`;
+    const titleText = isMediaFix ? 'Optimizing Video (Media Fix)...' : 'URL Download in progress...';
+    return `<div data-job-id="${j.id}" class="relative group rounded-2xl border bg-card border-border dark:border-slate-800/80 text-card-foreground shadow-sm flex flex-col w-full p-5 space-y-4">
         <div class="flex items-center justify-between">
-            <span class="inline-flex items-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 text-xs font-semibold uppercase">Downloading (${j.task_type})</span>
-            <span class="text-xs font-bold tabular-nums text-muted-foreground">${pct}%</span>
+            <span class="inline-flex items-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 text-xs font-semibold uppercase">${badgeText}</span>
+            <span data-job-progress-text class="text-xs font-bold tabular-nums text-muted-foreground">${pct}%</span>
         </div>
         <div class="space-y-1">
-            <h4 class="text-sm font-medium truncate">URL Download in progress...</h4>
+            <h4 class="text-sm font-medium truncate">${titleText}</h4>
             <p class="text-xs text-muted-foreground capitalize">Status: ${j.status}</p>
         </div>
         <div class="h-1.5 w-full overflow-hidden rounded-full bg-primary/20">
-            <div class="h-full rounded-full bg-primary transition-all duration-300" style="width: ${pct}%"></div>
+            <div data-job-progress-bar class="h-full rounded-full bg-primary transition-all duration-300" style="width: ${pct}%"></div>
         </div>
     </div>`;
 }
 
 function renderJobRow(j) {
     const pct = j.progress || 0;
-    return `<div class="flex items-center justify-between p-4">
+    const isMediaFix = j.task_type === 'media_fix';
+    const titleText = isMediaFix ? 'Media Fix (Optimizing Video)' : `URL Download (${j.task_type})`;
+    const descText = isMediaFix ? 'Background video transcoding/remuxing' : 'Background yt-dlp task';
+    return `<div data-job-id="${j.id}" class="flex items-center justify-between p-4">
         <div class="flex items-center gap-3">
-            <div class="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-xs">${pct}%</div>
+            <div data-job-progress-badge class="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-xs">${pct}%</div>
             <div>
-                <h4 class="text-sm font-medium">URL Download (${j.task_type}) - ${j.status}</h4>
-                <p class="text-xs text-muted-foreground">Background yt-dlp task</p>
+                <h4 class="text-sm font-medium">${titleText} - ${j.status}</h4>
+                <p class="text-xs text-muted-foreground">${descText}</p>
             </div>
         </div>
         <div class="flex items-center gap-4">
             <div class="w-32 h-1.5 overflow-hidden rounded-full bg-primary/20">
-                <div class="h-full rounded-full bg-primary transition-all duration-300" style="width: ${pct}%"></div>
+                <div data-job-progress-bar class="h-full rounded-full bg-primary transition-all duration-300" style="width: ${pct}%"></div>
             </div>
-            <span class="text-xs font-bold tabular-nums text-muted-foreground w-8 text-right">${pct}%</span>
+            <span data-job-progress-text class="text-xs font-bold tabular-nums text-muted-foreground w-8 text-right">${pct}%</span>
         </div>
     </div>`;
 }

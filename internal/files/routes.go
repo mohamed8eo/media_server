@@ -173,32 +173,12 @@ func (h *FileHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			hashWriter := sha256.New()
-			multiWriter := io.MultiWriter(dest, hashWriter)
-
-			buf := make([]byte, 256*1024)
-			written, err = io.CopyBuffer(multiWriter, part, buf)
+			buf := make([]byte, 4*1024*1024)
+			written, err = io.CopyBuffer(dest, part, buf)
 			dest.Close()
 			if err != nil {
 				os.Remove(destPath)
 				utils.RespondWithError(w, http.StatusInternalServerError, "Failed to write file")
-				return
-			}
-
-			fileHash = hex.EncodeToString(hashWriter.Sum(nil))
-
-			existingFile, err := h.db.GetFileByUserAndSHA256(userID, fileHash)
-			if err == nil && existingFile != nil {
-				os.Remove(destPath)
-				uploadedAtStr := "earlier"
-				if !existingFile.CreatedAt.IsZero() {
-					uploadedAtStr = existingFile.CreatedAt.Format("Jan 2, 2006 at 3:04 PM")
-				}
-				utils.RespondWithError(w, http.StatusConflict, fmt.Sprintf(
-					"This file already exists in your library as '%s' (uploaded on %s)",
-					existingFile.Filename,
-					uploadedAtStr,
-				))
 				return
 			}
 

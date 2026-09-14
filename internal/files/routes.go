@@ -221,7 +221,7 @@ func (h *FileHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		_ = h.db.CreateJob(jobID, fileID, userID, "media_fix")
 		h.audioPool.Submit(func() {
 			_ = h.db.UpdateJobStatus(jobID, "processing", "")
-			if err := h.fixMediaIfNeeded(fileID, destPath, mimeType); err != nil {
+			if err := h.fixMediaIfNeeded(fileID, jobID, destPath, mimeType); err != nil {
 				slog.Error("media fix failed", "file_id", fileID, "error", err)
 				_ = h.db.UpdateJobStatus(jobID, "failed", err.Error())
 			} else {

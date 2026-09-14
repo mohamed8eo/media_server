@@ -79,7 +79,7 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	fileID := uuid.New()
-	outputTemplate := filepath.Join(targetDir, "%(title)s [%(id)s].%(ext)s")
+	outputTemplate := filepath.Join(targetDir, "%(title)s.%(ext)s")
 
 	args := []string{
 		"--no-playlist",

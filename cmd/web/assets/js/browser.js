@@ -103,6 +103,21 @@ function initFileBrowser() {
             });
         }
     });
+
+    // Update folder select on upload page to reflect current folder
+    if (typeof updateUploadFolderSelect === 'function') updateUploadFolderSelect();
+}
+
+// Update the upload folder select to reflect current folder
+function updateUploadFolderSelect() {
+    const folderSelect = document.getElementById('upload-folder-select');
+    if (!folderSelect) return;
+    const urlFolder = new URLSearchParams(window.location.search).get('folder') || '/';
+    const options = folderSelect.options;
+    for (let i = 0; i < options.length; i++) {
+        const opt = options[i];
+        opt.selected = opt.value === urlFolder;
+    }
 }
 
 function itemKey(kind, id) { return kind + ':' + id; }

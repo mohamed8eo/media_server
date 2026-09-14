@@ -728,7 +728,7 @@ window.getFallbackIconSm = function(mime) {
 function getFileActions(f) {
     const cat = getCategoryFromMime(f.mime_type);
     let html = '';
-    if (cat === 'video' || cat === 'image' || cat === 'document') {
+    if (cat === 'video' || cat === 'image' || cat === 'document' || cat === 'audio') {
         html += `<button data-action="play" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors"><svg class="h-4 w-4 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>`;
     }
     html += `<button data-action="download" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-slate-700 dark:text-slate-200 transition-colors"><svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
@@ -753,7 +753,7 @@ function getFileActionsInline(f) {
     const cat = getCategoryFromMime(f.mime_type);
     const btnCls = 'inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-foreground h-8 w-8';
     let html = '';
-    if (cat === 'video' || cat === 'image' || cat === 'document') {
+    if (cat === 'video' || cat === 'image' || cat === 'document' || cat === 'audio') {
         html += `<button data-action="play" class="${btnCls} hidden sm:inline-flex"><svg class="h-4 w-4 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>`;
     }
     html += `<button data-action="download" class="${btnCls} hidden sm:inline-flex"><svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
@@ -1125,6 +1125,9 @@ function openFile(file) {
     const cat = getCategoryFromMime(file.mime_type);
     if (cat === 'video') {
         window.location.href = '/watch/' + encodeURIComponent(file.id);
+    } else if (cat === 'audio') {
+        // Audio player - navigate to play page or direct link
+        window.location.href = '/api/file/' + encodeURIComponent(file.id);
     } else if (file.mime_type && file.mime_type.toLowerCase().includes('pdf')) {
         // Mobile and tablet browsers commonly cannot render PDFs nested in an iframe.
         // Use the browser's native PDF reader (top-level navigation) for mobile/tablet,
@@ -1154,6 +1157,8 @@ function showFileViewerModal(file, type) {
         contentHtml = `<img src="/api/file/${file.id}" alt="${escapeHtml(file.filename)}" class="max-w-full max-h-[75vh] sm:max-h-[82vh] object-contain rounded-xl" />`;
     } else if (type === 'document') {
         contentHtml = `<iframe src="/api/file/${file.id}" class="w-full h-full border-0 rounded-xl" style="min-height:65vh"></iframe>`;
+    } else if (type === 'audio') {
+        contentHtml = `<audio controls preload="metadata" src="/api/file/${file.id}" class="w-full h-max max-h-[75vh] sm:max-h-[82vh] object-contain rounded-xl"></audio>`;
     }
 
     root.innerHTML = `

@@ -39,6 +39,11 @@ func GenerateThumbnail(storagePath, mimeType string) (string, error) {
 			return "", err
 		}
 		return thumbPath, nil
+	case strings.HasPrefix(mime, "audio/"):
+		if err := generateAudioThumb(storagePath, thumbPath); err != nil {
+			return "", err
+		}
+		return thumbPath, nil
 	default:
 		return "", ErrNoThumbnail
 	}
@@ -129,6 +134,65 @@ func generateImageThumbFallback(inputPath, outputPath string) error {
 	args := []string{
 		"-i", inputPath,
 		"-vf", "scale=320:-1",
+		"-frames:v", "1",
+		"-q:v", "3",
+		"-y",
+		outputPath,
+	}
+	cmd := exec.Command("ffmpeg", args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	return cmd.Run()
+}
+
+// generateAudioFallbackThumb generates a simple audio icon fallback.
+func generateAudioFallbackThumb(outputPath string) error {
+	args := []string{
+		"-f", "lavfi",
+		"-i", "color=#090d16:d=2",
+		"-vf", "drawtext=text='🎵':fontsize=32:x=(w-textw)/2:y=(h-th)/2:fontcolor=#ffffff",
+		"-frames:v", "1",
+		"-q:v", "3",
+		"-y",
+		outputPath,
+	}
+	cmd := exec.Command("ffmpeg", args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	return cmd.Run()
+}
+
+// generateAudioThumb creates a waveform thumbnail for audio files using ffmpeg.
+func generateAudioThumb(inputPath, outputPath string) error {
+	args := []string{
+		"-i", inputPath,
+	 "-filter_complex",
+		"[0:a]aformat=channel_layout=mono,showfps=metadata=1:fps=1/8,scale=320:-1[vid]",
+		"-map", "[vid]",
+		"-frames:v", "1",
+		"-q:v", "3",
+		"-y",
+		outputPath,
+	}
+	cmd := exec.Command("ffmpeg", args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		// Fallback: create a simple static audio icon instead
+		return generateAudioIconThumb(inputPath, outputPath)
+	}
+	return nil
+}
+
+// generateAudioIconThumb creates a static audio file icon as fallback thumbnail.
+func generateAudioIconThumb(inputPath, outputPath string) error {
+	// Use ffmpeg to generate a simple colored rectangle with "AUDIO" text
+	// Or we can just copy a static icon
+	// For now, create a simple ffmpeg-generated thumbnail
+	args := []string{
+		"-f", "lavdeter",
+		"-i", "color=#090d16:d=2",
+		"-vf", "drawtext=text='AUDIO':fontsize=24:x=(w-textw)/2:y=(h-text_h)/2:fontcolor=#ffffff",
 		"-frames:v", "1",
 		"-q:v", "3",
 		"-y",

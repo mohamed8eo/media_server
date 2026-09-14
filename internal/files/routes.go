@@ -283,7 +283,7 @@ func (h *FileHandler) GetFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 
-	inlineTypes := []string{"video/", "image/", "application/pdf"}
+	inlineTypes := []string{"video/", "image/", "application/pdf", "audio/"}
 	serveInline := false
 	for _, prefix := range inlineTypes {
 		if strings.HasPrefix(file.MimeType, prefix) {

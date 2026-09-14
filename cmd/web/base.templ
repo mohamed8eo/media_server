@@ -206,6 +206,7 @@ templ Base() {
 					const folder = (typeof currentFolder !== 'undefined' && currentFolder) ? currentFolder : '/';
 					
 					let successCount = 0;
+					let lastErrorMsg = '';
 					for (let i = 0; i < files.length; i++) {
 						const file = files[i];
 						const formData = new FormData();
@@ -217,7 +218,14 @@ templ Base() {
 								credentials: 'include',
 								body: formData
 							});
-							if (res.ok) successCount++;
+							if (res.ok) {
+								successCount++;
+							} else {
+								try {
+									const data = await res.json();
+									if (data.error) lastErrorMsg = data.error;
+								} catch (err) {}
+							}
 						} catch (e) {
 							console.error(e);
 						}
@@ -233,7 +241,9 @@ templ Base() {
 							window.location.reload();
 						}
 					} else {
-						if (typeof showToast === 'function') showToast('Failed to upload files');
+						if (typeof showToast === 'function') {
+							showToast(lastErrorMsg || 'Failed to upload files');
+						}
 					}
 				}
 			</script>

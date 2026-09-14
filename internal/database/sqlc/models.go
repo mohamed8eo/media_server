@@ -10,16 +10,17 @@ import (
 )
 
 type File struct {
-	ID           string
-	UserID       string
-	Filename     string
-	MimeType     string
-	Size         int64
-	Folder       string
-	StoragePath  string
-	LastAccessed sql.NullTime
-	CreatedAt    sql.NullTime
-	DeletedAt    sql.NullTime
+	ID               string
+	UserID           string
+	Filename         string
+	MimeType         string
+	Size             int64
+	Folder           string
+	StoragePath      string
+	LastAccessed     sql.NullTime
+	CreatedAt        sql.NullTime
+	DeletedAt        sql.NullTime
+	PlaybackProgress sql.NullInt64
 }
 
 type Folder struct {

@@ -47,19 +47,20 @@ func (q *Queries) DeleteFile(ctx context.Context, id string) error {
 }
 
 const getFileByID = `-- name: GetFileByID :one
-SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE id = ?
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress FROM files WHERE id = ?
 `
 
 type GetFileByIDRow struct {
-	ID           string
-	UserID       string
-	Filename     string
-	MimeType     string
-	Size         int64
-	Folder       string
-	StoragePath  string
-	CreatedAt    sql.NullTime
-	LastAccessed sql.NullTime
+	ID               string
+	UserID           string
+	Filename         string
+	MimeType         string
+	Size             int64
+	Folder           string
+	StoragePath      string
+	CreatedAt        sql.NullTime
+	LastAccessed     sql.NullTime
+	PlaybackProgress int64
 }
 
 func (q *Queries) GetFileByID(ctx context.Context, id string) (GetFileByIDRow, error) {
@@ -75,6 +76,7 @@ func (q *Queries) GetFileByID(ctx context.Context, id string) (GetFileByIDRow, e
 		&i.StoragePath,
 		&i.CreatedAt,
 		&i.LastAccessed,
+		&i.PlaybackProgress,
 	)
 	return i, err
 }
@@ -134,19 +136,20 @@ func (q *Queries) GetUserStorageUsage(ctx context.Context, userID string) (inter
 }
 
 const listFilesByUser = `-- name: ListFilesByUser :many
-SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress FROM files WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC
 `
 
 type ListFilesByUserRow struct {
-	ID           string
-	UserID       string
-	Filename     string
-	MimeType     string
-	Size         int64
-	Folder       string
-	StoragePath  string
-	CreatedAt    sql.NullTime
-	LastAccessed sql.NullTime
+	ID               string
+	UserID           string
+	Filename         string
+	MimeType         string
+	Size             int64
+	Folder           string
+	StoragePath      string
+	CreatedAt        sql.NullTime
+	LastAccessed     sql.NullTime
+	PlaybackProgress int64
 }
 
 func (q *Queries) ListFilesByUser(ctx context.Context, userID string) ([]ListFilesByUserRow, error) {
@@ -168,6 +171,7 @@ func (q *Queries) ListFilesByUser(ctx context.Context, userID string) ([]ListFil
 			&i.StoragePath,
 			&i.CreatedAt,
 			&i.LastAccessed,
+			&i.PlaybackProgress,
 		); err != nil {
 			return nil, err
 		}
@@ -210,7 +214,7 @@ func (q *Queries) ListMimeTypesByUser(ctx context.Context, userID string) ([]str
 }
 
 const listRecentUploads = `-- name: ListRecentUploads :many
-SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress FROM files WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?
 `
 
 type ListRecentUploadsParams struct {
@@ -219,15 +223,16 @@ type ListRecentUploadsParams struct {
 }
 
 type ListRecentUploadsRow struct {
-	ID           string
-	UserID       string
-	Filename     string
-	MimeType     string
-	Size         int64
-	Folder       string
-	StoragePath  string
-	CreatedAt    sql.NullTime
-	LastAccessed sql.NullTime
+	ID               string
+	UserID           string
+	Filename         string
+	MimeType         string
+	Size             int64
+	Folder           string
+	StoragePath      string
+	CreatedAt        sql.NullTime
+	LastAccessed     sql.NullTime
+	PlaybackProgress int64
 }
 
 func (q *Queries) ListRecentUploads(ctx context.Context, arg ListRecentUploadsParams) ([]ListRecentUploadsRow, error) {
@@ -249,6 +254,7 @@ func (q *Queries) ListRecentUploads(ctx context.Context, arg ListRecentUploadsPa
 			&i.StoragePath,
 			&i.CreatedAt,
 			&i.LastAccessed,
+			&i.PlaybackProgress,
 		); err != nil {
 			return nil, err
 		}
@@ -264,7 +270,7 @@ func (q *Queries) ListRecentUploads(ctx context.Context, arg ListRecentUploadsPa
 }
 
 const listRecentlyPlayed = `-- name: ListRecentlyPlayed :many
-SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed FROM files WHERE user_id = ? AND deleted_at IS NULL AND last_accessed IS NOT NULL ORDER BY last_accessed DESC LIMIT ?
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress FROM files WHERE user_id = ? AND deleted_at IS NULL AND last_accessed IS NOT NULL ORDER BY last_accessed DESC LIMIT ?
 `
 
 type ListRecentlyPlayedParams struct {
@@ -273,15 +279,16 @@ type ListRecentlyPlayedParams struct {
 }
 
 type ListRecentlyPlayedRow struct {
-	ID           string
-	UserID       string
-	Filename     string
-	MimeType     string
-	Size         int64
-	Folder       string
-	StoragePath  string
-	CreatedAt    sql.NullTime
-	LastAccessed sql.NullTime
+	ID               string
+	UserID           string
+	Filename         string
+	MimeType         string
+	Size             int64
+	Folder           string
+	StoragePath      string
+	CreatedAt        sql.NullTime
+	LastAccessed     sql.NullTime
+	PlaybackProgress int64
 }
 
 func (q *Queries) ListRecentlyPlayed(ctx context.Context, arg ListRecentlyPlayedParams) ([]ListRecentlyPlayedRow, error) {
@@ -303,6 +310,7 @@ func (q *Queries) ListRecentlyPlayed(ctx context.Context, arg ListRecentlyPlayed
 			&i.StoragePath,
 			&i.CreatedAt,
 			&i.LastAccessed,
+			&i.PlaybackProgress,
 		); err != nil {
 			return nil, err
 		}
@@ -367,5 +375,19 @@ UPDATE files SET last_accessed = CURRENT_TIMESTAMP WHERE id = ?
 
 func (q *Queries) UpdateLastAccessed(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, updateLastAccessed, id)
+	return err
+}
+
+const updatePlaybackProgress = `-- name: UpdatePlaybackProgress :exec
+UPDATE files SET playback_progress = ? WHERE id = ?
+`
+
+type UpdatePlaybackProgressParams struct {
+	PlaybackProgress int64
+	ID               string
+}
+
+func (q *Queries) UpdatePlaybackProgress(ctx context.Context, arg UpdatePlaybackProgressParams) error {
+	_, err := q.db.ExecContext(ctx, updatePlaybackProgress, arg.PlaybackProgress, arg.ID)
 	return err
 }

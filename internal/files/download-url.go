@@ -77,7 +77,7 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	fileID := uuid.New()
-	outputTemplate := filepath.Join(targetDir, fileID.String()+".%(ext)s")
+	outputTemplate := filepath.Join(targetDir, "%(title)s [%(id)s].%(ext)s")
 
 	args := []string{
 		"--no-playlist",
@@ -105,6 +105,14 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 	// Submit download task to background worker pool
 	GlobalDownloadPool.Submit(func() {
 		_ = h.db.UpdateJobStatus(jobID, "processing", "")
+
+		existingFiles := make(map[string]bool)
+		if entries, err := os.ReadDir(targetDir); err == nil {
+			for _, entry := range entries {
+				existingFiles[entry.Name()] = true
+			}
+		}
+		startTime := time.Now()
 
 		cmd := exec.Command("yt-dlp", args...)
 		stdoutPipe, err := cmd.StdoutPipe()
@@ -169,14 +177,40 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		matches, err := filepath.Glob(filepath.Join(targetDir, fileID.String()+".*"))
-		if err != nil || len(matches) == 0 {
-			slog.Error("downloaded file not found", "file_id", fileID)
+		var finalFilePath string
+		if entries, err := os.ReadDir(targetDir); err == nil {
+			var newestTime time.Time
+			for _, entry := range entries {
+				if entry.IsDir() {
+					continue
+				}
+				name := entry.Name()
+				fullPath := filepath.Join(targetDir, name)
+				info, err := entry.Info()
+				if err != nil {
+					continue
+				}
+				if !existingFiles[name] || info.ModTime().After(startTime.Add(-2*time.Second)) {
+					if info.ModTime().After(newestTime) {
+						newestTime = info.ModTime()
+						finalFilePath = fullPath
+					}
+				}
+			}
+		}
+
+		if finalFilePath == "" {
+			matches, err := filepath.Glob(filepath.Join(targetDir, "*"))
+			if err == nil && len(matches) > 0 {
+				finalFilePath = matches[len(matches)-1]
+			}
+		}
+
+		if finalFilePath == "" {
+			slog.Error("downloaded file not found", "job_id", jobID)
 			_ = h.db.UpdateJobStatus(jobID, "failed", "downloaded file not found")
 			return
 		}
-
-		finalFilePath := matches[0]
 		filename := filepath.Base(finalFilePath)
 
 		info, err := os.Stat(finalFilePath)

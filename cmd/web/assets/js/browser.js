@@ -15,6 +15,65 @@ document.addEventListener('mediaUpdated', () => {
     }
 });
 
+document.addEventListener('keydown', (e) => {
+    const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'n') {
+        if (!isTrashView) {
+            e.preventDefault();
+            createNewFolder();
+        }
+        return;
+    }
+
+    if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') || (e.key === '/' && !isInput)) {
+        const searchInput = document.getElementById('file-search');
+        if (searchInput) {
+            e.preventDefault();
+            searchInput.focus();
+            searchInput.select();
+        }
+        return;
+    }
+
+    if (isInput) return;
+
+    if (e.key === 'Escape') {
+        if (selectedItems.size > 0) {
+            clearSelection();
+            renderAll();
+            e.preventDefault();
+        }
+        return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        selectedItems.clear();
+        const files = getFilesInFolder(currentFolder);
+        const folders = getFoldersInFolder(currentFolder);
+        folders.forEach(f => {
+            const folderId = (folderItems.find(item => item.path === f) || {}).id;
+            if (folderId) selectedItems.add(itemKey('folder', folderId));
+        });
+        files.forEach(file => {
+            selectedItems.add(itemKey('file', file.id));
+        });
+        renderAll();
+        return;
+    }
+
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedItems.size > 0) {
+        e.preventDefault();
+        if (isTrashView) {
+            batchPurge();
+        } else {
+            batchDelete();
+        }
+        return;
+    }
+});
+
 function initFileBrowser() {
     isTrashView = new URLSearchParams(window.location.search).get('trash') === '1';
     currentFilter = new URLSearchParams(window.location.search).get('type') || 'all';
@@ -167,7 +226,7 @@ function renderFolderCard(folder) {
     const count = getFolderItemCount(folder);
     const folderId = (folderItems.find(f => f.path === folder) || {}).id;
     const checked = folderId && selectedItems.has(itemKey('folder', folderId)) ? 'checked' : '';
-    return `<div data-folder-path="${escapeHtml(folder)}" class="group relative cursor-pointer rounded-xl border bg-card border-border text-card-foreground p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 flex items-center justify-between folder-card">
+    return `<div data-folder-path="${escapeHtml(folder)}" x-data="{ menuOpen: false }" :class="menuOpen ? 'z-30 relative' : ''" class="group relative cursor-pointer rounded-xl border bg-card border-border text-card-foreground p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 flex items-center justify-between folder-card">
 		${folderId ? `<input type="checkbox" data-select-kind="folder" data-select-id="${folderId}" ${checked} class="absolute left-3 top-3 h-4 w-4 z-10" />` : ''}
         <div class="flex items-center gap-3.5 min-w-0">
             <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent text-primary">
@@ -178,6 +237,15 @@ function renderFolderCard(folder) {
                 <p class="text-xs text-muted-foreground">${count} items</p>
             </div>
         </div>
+        ${folderId ? `<div class="relative shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" :class="menuOpen ? 'opacity-100' : ''">
+            <button @click.stop="menuOpen = !menuOpen" class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+                <svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            </button>
+            <div x-show="menuOpen" @click.outside="menuOpen = false" x-transition class="absolute right-0 top-full mt-1 w-40 rounded-xl bg-card border border-border dark:border-slate-800 shadow-2xl py-1.5 z-[100] text-xs font-medium">
+                <button data-action="rename-folder" @click="menuOpen = false" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">Rename</button>
+                <button data-action="delete-folder" @click="menuOpen = false" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete folder</button>
+            </div>
+        </div>` : ''}
     </div>`;
 }
 
@@ -222,6 +290,64 @@ window.addEventListener('popstate', () => {
     setFilter(currentFilter, false);
     renderAll();
 });
+
+function handleFolderAction(action, folderPath) {
+    if (action === 'rename-folder') {
+        showRenameFolderPrompt(folderPath);
+    } else if (action === 'delete-folder') {
+        showDeleteFolderConfirm(folderPath);
+    }
+}
+
+async function showRenameFolderPrompt(folderPath) {
+    const folderId = (folderItems.find(f => f.path === folderPath) || {}).id;
+    if (!folderId) return;
+    const currentName = folderPath.split('/').pop();
+    const newName = await showPromptModal('Rename Folder', currentName);
+    if (!newName || newName === currentName) return;
+    try {
+        const res = await fetch(`/api/file/folder/${folderId}/rename`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newName })
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || 'Failed to rename folder');
+        }
+        await fetchFiles();
+        showToast('Folder renamed successfully');
+    } catch (err) {
+        showToast(err.message || 'Failed to rename folder');
+    }
+}
+
+async function showDeleteFolderConfirm(folderPath) {
+    const folderId = (folderItems.find(f => f.path === folderPath) || {}).id;
+    if (!folderId) return;
+    const name = folderPath.split('/').pop();
+    const confirmed = await showConfirmModal('Delete Folder', `Move "${name}" and everything inside it to the recycle bin?`);
+    if (!confirmed) return;
+    try {
+        const res = await fetch('/api/file/batch/delete', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: [{ kind: 'folder', id: folderId }] })
+        });
+        if (!res.ok) throw new Error('Failed');
+        selectedItems.delete(itemKey('folder', folderId));
+        if (currentFolder === folderPath || currentFolder.startsWith(folderPath + '/')) {
+            const parent = folderPath.split('/').slice(0, -1).join('/');
+            navigateToFolder(parent || '/');
+        }
+        await fetchFiles();
+        showToast('Folder moved to recycle bin');
+    } catch (err) {
+        showToast('Failed to delete folder');
+    }
+}
 
 function renderAll() {
     renderSelectionBar();
@@ -269,6 +395,7 @@ function getCategoryFromMime(mime) {
     if (mime.startsWith('video/')) return 'video';
     if (mime.startsWith('image/')) return 'image';
     if (mime.startsWith('audio/')) return 'audio';
+    if (mime.includes('zip') || mime.includes('tar') || mime.includes('7z') || mime.includes('rar') || mime.includes('gzip') || mime.includes('x-compress')) return 'archive';
     if (mime.includes('pdf') || mime.includes('document') || mime.includes('word') || mime.includes('sheet') || mime.includes('text/')) return 'document';
     return 'other';
 }
@@ -368,7 +495,14 @@ function renderFiles() {
 					var checkbox = e.target.closest('[data-select-kind]');
 					if (checkbox) { e.stopPropagation(); toggleSelection(checkbox.dataset.selectKind, checkbox.dataset.selectId, checkbox.checked, e.shiftKey); return; }
                     var folderCard = e.target.closest('[data-folder-path]');
-                    if (folderCard) navigateToFolder(folderCard.dataset.folderPath);
+                    if (!folderCard) return;
+                    var action = e.target.closest('[data-action]');
+                    if (action) {
+                        e.stopPropagation();
+                        handleFolderAction(action.dataset.action, folderCard.dataset.folderPath);
+                        return;
+                    }
+                    navigateToFolder(folderCard.dataset.folderPath);
                 });
                 folderGridEl._delegationBound = true;
             }
@@ -458,7 +592,7 @@ function renderGridCard(f) {
             x-transition:enter="transition ease-out duration-150"
             x-transition:enter-start="opacity-0 translate-y-1"
             x-transition:enter-end="opacity-100 translate-y-0"
-            class="absolute right-2 top-2 z-30 flex max-w-[calc(100%-1rem)] items-center gap-1 overflow-x-auto rounded-xl border border-border bg-background/90 p-1 shadow-lg backdrop-blur-md scrollbar-none dark:border-slate-800 dark:bg-slate-900/90">
+            class="absolute right-2 top-2 z-30 flex max-w-[calc(100%-1rem)] items-center gap-1 rounded-xl border border-border bg-background/90 p-1 shadow-lg backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
             ${actions}
         </div>
         <div class="p-4 space-y-1">
@@ -515,19 +649,34 @@ function getThumbnailHtml(f) {
         return `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=getFallbackIcon('${f.mime_type}')" /><div class="absolute inset-0 flex items-center justify-center"><div class="flex h-12 w-12 items-center justify-center rounded-full bg-black/60 backdrop-blur-md shadow-lg text-white"><svg class="h-6 w-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`;
     }
     if (cat === 'document') {
-        // Document / PDF stylized preview card with a deterministic color gradient
-        const gradient = gradientForKey(f.id);
-        return `<div class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br ${gradient} text-white p-4 text-center gap-1.5">
-            <svg class="h-10 w-10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+        if (f.mime_type && f.mime_type.includes('pdf')) {
+            // PDFs get a real page-1 cover; fall back to the stylized card if generation failed
+            return `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=getDocumentFallback('${f.id}','${f.mime_type}')" />`;
+        }
+        return getDocumentFallback(f.id, f.mime_type);
+    }
+    if (cat === 'archive') {
+        // Archive files get their own amber "packed box" card instead of the generic file icon
+        return `<div class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-500 to-orange-600 text-white p-4 text-center gap-1.5">
+            <svg class="h-10 w-10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
             <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-black/20 backdrop-blur-sm">${getTypeBadge(f.mime_type)}</span>
         </div>`;
     }
     return `<div class="w-full h-full flex items-center justify-center">${getFallbackIcon(f.mime_type)}</div>`;
 }
 
+window.getDocumentFallback = function(fileId, mime) {
+    const gradient = gradientForKey(fileId);
+    return `<div class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br ${gradient} text-white p-4 text-center gap-1.5">
+        <svg class="h-10 w-10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-black/20 backdrop-blur-sm">${getTypeBadge(mime)}</span>
+    </div>`;
+};
+
 function getThumbnailHtmlSmall(f) {
     const cat = getCategoryFromMime(f.mime_type);
-    if (cat === 'image' || cat === 'video') {
+    const isPdf = f.mime_type && f.mime_type.includes('pdf');
+    if (cat === 'image' || cat === 'video' || (cat === 'document' && isPdf)) {
         return `<img src="/api/file/${f.id}/thumb" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=getColorFallbackSm('${f.id}','${f.mime_type}')" />`;
     }
     return getColorFallbackSm(f.id, f.mime_type);
@@ -540,13 +689,15 @@ window.getColorIconSm = function(mime) {
         image: '<svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
         audio: '<svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
         document: '<svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>',
+        archive: '<svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>',
         other: '<svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>'
     };
     return icons[cat] || icons.other;
 };
 
 window.getColorFallbackSm = function(fileId, mime) {
-    const gradient = gradientForKey(fileId);
+    const cat = getCategoryFromMime(mime);
+    const gradient = cat === 'archive' ? 'from-amber-500 to-orange-600' : gradientForKey(fileId);
     return `<div class="w-full h-full flex items-center justify-center bg-gradient-to-br ${gradient}">${getColorIconSm(mime)}</div>`;
 };
 
@@ -589,6 +740,7 @@ function getFileActions(f) {
             <svg class="h-4 w-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
         <div x-show="menuOpen" @click.outside="menuOpen = false; showActions = false" x-transition class="absolute right-0 bottom-full mb-2 sm:bottom-auto sm:top-full sm:mt-2 w-48 rounded-xl bg-card border border-border dark:border-slate-800 shadow-2xl z-[100] p-1 text-xs font-medium">
+            <button data-action="rename" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 rounded-lg hover:bg-accent hover:text-accent-foreground flex items-center gap-2">Rename</button>
             <button data-action="info" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 rounded-lg hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
             <button data-action="delete" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 rounded-lg text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
         </div>
@@ -615,6 +767,7 @@ function getFileActionsInline(f) {
             <button data-action="play" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2 sm:hidden">Open</button>
             <button data-action="download" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2 sm:hidden">Download</button>
             <button data-action="move" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2 sm:hidden">Move</button>
+            <button data-action="rename" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">Rename</button>
             <button data-action="info" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 hover:bg-accent hover:text-accent-foreground flex items-center gap-2">More info</button>
             <button data-action="delete" @click="menuOpen = false; showActions = false" class="w-full text-left px-3.5 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2">Delete file</button>
         </div>

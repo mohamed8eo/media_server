@@ -47,10 +47,12 @@ type Service interface {
 	UpdateFilename(fileID uuid.UUID, filename string) error
 	UpdateFileFolder(fileID uuid.UUID, folder string) error
 	UpdateFileSize(fileID uuid.UUID, size int64) error
+	UpdatePlaybackProgress(fileID uuid.UUID, progress int) error
 	CreateFolder(userID uuid.UUID, path string) (*models.Folder, error)
 	ListFoldersByUser(userID uuid.UUID) ([]models.Folder, error)
 	SoftDelete(userID uuid.UUID, items []ItemRef) error
 	MoveItems(userID uuid.UUID, items []ItemRef, destination string) error
+	RenameFolder(userID, folderID uuid.UUID, newName string) (string, error)
 	ListTrash(userID uuid.UUID) ([]TrashItem, error)
 	RestoreTrash(userID uuid.UUID, items []ItemRef) error
 	FilesForPurge(userID uuid.UUID, items []ItemRef, expiredOnly bool) ([]models.File, error)

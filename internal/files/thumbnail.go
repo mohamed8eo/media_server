@@ -34,6 +34,11 @@ func GenerateThumbnail(storagePath, mimeType string) (string, error) {
 			return "", err
 		}
 		return thumbPath, nil
+	case strings.HasPrefix(mime, "application/pdf") || mime == "application/x-pdf":
+		if err := generatePDFThumb(storagePath, thumbPath); err != nil {
+			return "", err
+		}
+		return thumbPath, nil
 	default:
 		return "", ErrNoThumbnail
 	}
@@ -133,6 +138,33 @@ func generateImageThumbFallback(inputPath, outputPath string) error {
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	return cmd.Run()
+}
+
+// generatePDFThumb rasterizes page 1 of a PDF to a JPEG cover image using
+// poppler's pdftoppm. With -singlefile, pdftoppm writes exactly "<prefix>.jpg"
+// (no page-number suffix), so the prefix is outputPath with its extension
+// stripped, making the result land precisely at outputPath.
+func generatePDFThumb(inputPath, outputPath string) error {
+	prefix := strings.TrimSuffix(outputPath, filepath.Ext(outputPath))
+	args := []string{
+		"-jpeg",
+		"-f", "1",
+		"-l", "1",
+		"-singlefile",
+		"-scale-to", "320",
+		inputPath,
+		prefix,
+	}
+	cmd := exec.Command("pdftoppm", args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	if _, err := os.Stat(outputPath); err != nil {
+		return err
+	}
+	return nil
 }
 
 func getExtensionFromPath(path string) string {

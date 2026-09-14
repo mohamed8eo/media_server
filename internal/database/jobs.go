@@ -11,14 +11,14 @@ import (
 )
 
 type Job struct {
-	ID        uuid.UUID
-	FileID    uuid.UUID
-	UserID    uuid.UUID
-	TaskType  string
-	Status    string
-	Progress  int
-	Error     string
-	CreatedAt time.Time
+	ID        uuid.UUID `json:"id"`
+	FileID    uuid.UUID `json:"file_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	TaskType  string    `json:"task_type"`
+	Status    string    `json:"status"`
+	Progress  int       `json:"progress"`
+	Error     string    `json:"error"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func (s *service) CreateJob(id, fileID uuid.UUID, userID uuid.UUID, taskType string) error {

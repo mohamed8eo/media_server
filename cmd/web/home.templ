@@ -21,8 +21,8 @@ templ HomeContent() {
 templ Home() {
 	@AppShell("all", "", "") {
 		@HomeContent()
-		<script src="/assets/js/browser.js?v=2"></script>
-		<script src="/assets/js/upload.js"></script>
+		<script src={ "/assets/js/browser.js?v=" + AssetVersion }></script>
+		<script src={ "/assets/js/upload.js?v=" + AssetVersion }></script>
 		<script>
 			document.addEventListener('DOMContentLoaded', () => {
 				initFileBrowser();

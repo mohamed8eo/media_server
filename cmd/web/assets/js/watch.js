@@ -10,13 +10,14 @@
     const queue = document.getElementById('watch-queue');
     let videos = [];
     let currentID = page.dataset.videoId;
+    let lastProgressSave = 0;
 
     const GRADIENT_PALETTE = [
         'from-blue-500 to-cyan-400',
         'from-red-500 to-orange-400',
         'from-emerald-500 to-green-400',
         'from-purple-500 to-fuchsia-400',
-        'from-amber-500 to-yellow-400',
+        'from-amber-500 to-yellow-500',
         'from-pink-500 to-rose-400',
         'from-cyan-500 to-sky-400',
         'from-indigo-500 to-violet-400',
@@ -53,6 +54,29 @@
 
     function currentVideo() {
         return videos.find(video => video.id === currentID);
+    }
+
+    async function savePlaybackProgress(position) {
+        if (!currentID || position <= lastProgressSave + 5) return;
+        lastProgressSave = position;
+        try {
+            await fetch(`/api/file/${encodeURIComponent(currentID)}/progress`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ progress: Math.floor(position) })
+            });
+        } catch (e) {
+            console.error('Failed to save playback progress:', e);
+        }
+    }
+
+    function restorePlaybackProgress() {
+        const video = currentVideo();
+        if (!video || !player) return;
+        if (video.playback_progress && video.playback_progress > 0) {
+            player.currentTime = video.playback_progress;
+        }
     }
 
     function queueVideos() {
@@ -98,6 +122,13 @@
         document.title = `${displayName(video.filename)} · Media Server`;
         if (updateHistory) history.pushState({ videoID: id }, '', `/watch/${encodeURIComponent(id)}`);
         renderQueue();
+        
+        if (player) {
+            player.addEventListener('loadedmetadata', function onLoaded() {
+                player.removeEventListener('loadedmetadata', onLoaded);
+                restorePlaybackProgress();
+            }, { once: true });
+        }
     }
 
     async function loadQueue() {
@@ -108,6 +139,18 @@
             videos = (data.files || []).filter(file => String(file.mime_type || '').toLowerCase().startsWith('video/'));
             if (!currentVideo()) throw new Error('Video unavailable');
             renderQueue();
+
+            if (player) {
+                player.addEventListener('loadedmetadata', function onLoaded() {
+                    player.removeEventListener('loadedmetadata', onLoaded);
+                    restorePlaybackProgress();
+                }, { once: true });
+                // metadata may already be loaded by the time this listener attaches
+                // (e.g. cached video), in which case the event never fires again.
+                if (player.readyState >= 1) {
+                    restorePlaybackProgress();
+                }
+            }
         } catch (error) {
             queue.innerHTML = '<p class="px-2 py-4 text-sm text-muted-foreground">Unable to load videos. Try refreshing the page.</p>';
         }
@@ -117,6 +160,56 @@
         const id = window.location.pathname.split('/').pop();
         if (id && id !== currentID) selectVideo(id, false);
     });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+        const key = e.key.toLowerCase();
+
+        if (e.code === 'Space' || key === 'k') {
+            e.preventDefault();
+            if (player.paused) {
+                player.play();
+            } else {
+                player.pause();
+            }
+        } else if (key === 'f') {
+            e.preventDefault();
+            if (!document.fullscreenElement) {
+                if (player.requestFullscreen) {
+                    player.requestFullscreen();
+                } else if (player.webkitRequestFullscreen) {
+                    player.webkitRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        } else if (key === 'arrowleft' || key === 'j') {
+            e.preventDefault();
+            player.currentTime = Math.max(0, player.currentTime - (key === 'j' ? 10 : 5));
+        } else if (key === 'arrowright' || key === 'l') {
+            e.preventDefault();
+            player.currentTime = Math.min(player.duration || 0, player.currentTime + (key === 'l' ? 10 : 5));
+        } else if (key === 'arrowup') {
+            e.preventDefault();
+            player.volume = Math.min(1, player.volume + 0.1);
+        } else if (key === 'arrowdown') {
+            e.preventDefault();
+            player.volume = Math.max(0, player.volume - 0.1);
+        } else if (key === 'm') {
+            e.preventDefault();
+            player.muted = !player.muted;
+        }
+    });
+
+    if (player) {
+        player.addEventListener('timeupdate', () => {
+            if (!player.paused) {
+                savePlaybackProgress(player.currentTime);
+            }
+        });
+    }
 
     loadQueue();
 })();

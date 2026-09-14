@@ -63,6 +63,7 @@ func NewRouter(db database.Service) http.Handler {
 	r.Get("/jobs/{id}", h.GetJobHandler)
 	r.Get("/", h.ListHandler)
 	r.Post("/mkdir", h.MkdirHandler)
+	r.Patch("/folder/{id}/rename", h.RenameFolderHandler)
 	r.Get("/trash", h.TrashHandler)
 	r.Post("/batch/delete", h.BatchDeleteHandler)
 	r.Patch("/batch/move", h.BatchMoveHandler)
@@ -76,6 +77,7 @@ func NewRouter(db database.Service) http.Handler {
 	r.Delete("/{id}", h.DeleteFileHandler)
 	r.Patch("/{id}/rename", h.RenameFileHandler)
 	r.Patch("/{id}/move", h.MoveFileHandler)
+	r.Patch("/{id}/progress", h.UpdatePlaybackProgressHandler)
 	r.Get("/recent", h.RecentHandler)
 	r.Get("/stats", h.StatsHandler)
 
@@ -359,6 +361,38 @@ func (h *FileHandler) MkdirHandler(w http.ResponseWriter, r *http.Request) {
 	utils.RespondWithJSON(w, http.StatusCreated, map[string]string{
 		"path": "/" + cleaned,
 	})
+}
+
+func (h *FileHandler) RenameFolderHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+
+	folderIDstr := chi.URLParam(r, "id")
+	folderID, err := uuid.Parse(folderIDstr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid folder ID")
+		return
+	}
+
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Name) == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "Missing folder name")
+		return
+	}
+
+	newPath, err := h.db.RenameFolder(userID, folderID, req.Name)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	w.Header().Set("HX-Trigger", "mediaUpdated")
+	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"path": newPath})
 }
 
 type ListResponse struct {
@@ -927,4 +961,40 @@ func (h *FileHandler) MoveFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"folder": req.Folder})
+}
+
+func (h *FileHandler) UpdatePlaybackProgressHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+
+	fileIDstr := chi.URLParam(r, "id")
+	fileID, err := uuid.Parse(fileIDstr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid file ID")
+		return
+	}
+
+	var req struct {
+		Progress int `json:"progress"`
+	}
+	if err = json.NewDecoder(r.Body).Decode(&req); err != nil || req.Progress < 0 {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid progress value")
+		return
+	}
+
+	file, err := h.db.GetFileByID(fileID)
+	if err != nil || file.UserID != userID {
+		utils.RespondWithError(w, http.StatusNotFound, "File not found")
+		return
+	}
+
+	if err := h.db.UpdatePlaybackProgress(fileID, req.Progress); err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to update playback progress")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]any{"playback_progress": req.Progress})
 }

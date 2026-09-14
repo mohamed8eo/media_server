@@ -171,6 +171,52 @@ func (s *service) MoveItems(userID uuid.UUID, items []ItemRef, destination strin
 	return tx.Commit()
 }
 
+// RenameFolder renames a folder in place (keeping the same parent) and
+// cascades the change to every descendant folder path and file.folder value,
+// reusing the same prefix-rewrite pattern as MoveItems.
+func (s *service) RenameFolder(userID, folderID uuid.UUID, newName string) (string, error) {
+	newName = strings.Trim(strings.TrimSpace(newName), "/")
+	if newName == "" || strings.Contains(newName, "/") {
+		return "", fmt.Errorf("invalid folder name")
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback()
+
+	var p string
+	if err := tx.QueryRow(`SELECT path FROM folders WHERE id=? AND user_id=? AND deleted_at IS NULL`, folderID.String(), userID.String()).Scan(&p); err != nil {
+		return "", fmt.Errorf("folder not found")
+	}
+	if p == "/" {
+		return "", fmt.Errorf("cannot rename root folder")
+	}
+
+	target := normalizeFolder(path.Join(path.Dir(p), newName))
+	if target == p {
+		return target, tx.Commit()
+	}
+
+	var n int
+	if err := tx.QueryRow(`SELECT COUNT(1) FROM folders WHERE user_id=? AND path=? AND deleted_at IS NULL`, userID.String(), target).Scan(&n); err != nil {
+		return "", err
+	}
+	if n > 0 {
+		return "", fmt.Errorf("a folder with that name already exists")
+	}
+
+	if _, err = tx.Exec(`UPDATE files SET folder = CASE WHEN folder=? THEN ? ELSE ? || substr(folder, length(?)+1) END WHERE user_id=? AND (folder=? OR folder LIKE ?) AND deleted_at IS NULL`, p, target, target, p, userID.String(), p, p+"/%"); err != nil {
+		return "", err
+	}
+	if _, err = tx.Exec(`UPDATE folders SET path = CASE WHEN path=? THEN ? ELSE ? || substr(path, length(?)+1) END WHERE user_id=? AND (path=? OR path LIKE ?) AND deleted_at IS NULL`, p, target, target, p, userID.String(), p, p+"/%"); err != nil {
+		return "", err
+	}
+
+	return target, tx.Commit()
+}
+
 func (s *service) ListTrash(userID uuid.UUID) ([]TrashItem, error) {
 	ctx := context.Background()
 	rows, err := s.db.QueryContext(ctx, `SELECT 'folder',id,path,path,deleted_at,0 FROM folders WHERE user_id=? AND deleted_at IS NOT NULL UNION ALL SELECT 'file',id,filename,folder,deleted_at,size FROM files WHERE user_id=? AND deleted_at IS NOT NULL ORDER BY 5 DESC`, userID.String(), userID.String())

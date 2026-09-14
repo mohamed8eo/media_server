@@ -63,15 +63,16 @@ func (s *service) ListFilesByUser(userID uuid.UUID) ([]models.File, error) {
 		}
 
 		files = append(files, models.File{
-			ID:           fid,
-			UserID:       uid,
-			Filename:     f.Filename,
-			MimeType:     f.MimeType,
-			Size:         f.Size,
-			Folder:       normalizeFolder(f.Folder),
-			StoragePath:  f.StoragePath,
-			CreatedAt:    createdAt,
-			LastAccessed: lastAccessed,
+			ID:               fid,
+			UserID:           uid,
+			Filename:         f.Filename,
+			MimeType:         f.MimeType,
+			Size:             f.Size,
+			Folder:           normalizeFolder(f.Folder),
+			StoragePath:      f.StoragePath,
+			PlaybackProgress: int(f.PlaybackProgress),
+			CreatedAt:        createdAt,
+			LastAccessed:     lastAccessed,
 		})
 	}
 	return files, nil
@@ -97,15 +98,16 @@ func (s *service) GetFileByID(fileID uuid.UUID) (*models.File, error) {
 	}
 
 	return &models.File{
-		ID:           fid,
-		UserID:       uid,
-		Filename:     f.Filename,
-		MimeType:     f.MimeType,
-		Size:         f.Size,
-		Folder:       normalizeFolder(f.Folder),
-		StoragePath:  f.StoragePath,
-		CreatedAt:    createdAt,
-		LastAccessed: lastAccessed,
+		ID:               fid,
+		UserID:           uid,
+		Filename:         f.Filename,
+		MimeType:         f.MimeType,
+		Size:             f.Size,
+		Folder:           normalizeFolder(f.Folder),
+		StoragePath:      f.StoragePath,
+		PlaybackProgress: int(f.PlaybackProgress),
+		CreatedAt:        createdAt,
+		LastAccessed:     lastAccessed,
 	}, nil
 }
 
@@ -142,15 +144,16 @@ func (s *service) ListRecentUploads(userID uuid.UUID, limit int) ([]models.File,
 		}
 
 		files = append(files, models.File{
-			ID:           fid,
-			UserID:       uid,
-			Filename:     f.Filename,
-			MimeType:     f.MimeType,
-			Size:         f.Size,
-			Folder:       normalizeFolder(f.Folder),
-			StoragePath:  f.StoragePath,
-			CreatedAt:    createdAt,
-			LastAccessed: lastAccessed,
+			ID:               fid,
+			UserID:           uid,
+			Filename:         f.Filename,
+			MimeType:         f.MimeType,
+			Size:             f.Size,
+			Folder:           normalizeFolder(f.Folder),
+			StoragePath:      f.StoragePath,
+			PlaybackProgress: int(f.PlaybackProgress),
+			CreatedAt:        createdAt,
+			LastAccessed:     lastAccessed,
 		})
 	}
 	return files, nil
@@ -184,15 +187,16 @@ func (s *service) ListRecentlyPlayed(userID uuid.UUID, limit int) ([]models.File
 		}
 
 		files = append(files, models.File{
-			ID:           fid,
-			UserID:       uid,
-			Filename:     f.Filename,
-			MimeType:     f.MimeType,
-			Size:         f.Size,
-			Folder:       normalizeFolder(f.Folder),
-			StoragePath:  f.StoragePath,
-			CreatedAt:    createdAt,
-			LastAccessed: lastAccessed,
+			ID:               fid,
+			UserID:           uid,
+			Filename:         f.Filename,
+			MimeType:         f.MimeType,
+			Size:             f.Size,
+			Folder:           normalizeFolder(f.Folder),
+			StoragePath:      f.StoragePath,
+			PlaybackProgress: int(f.PlaybackProgress),
+			CreatedAt:        createdAt,
+			LastAccessed:     lastAccessed,
 		})
 	}
 	return files, nil
@@ -257,5 +261,13 @@ func (s *service) UpdateFileSize(fileID uuid.UUID, size int64) error {
 	return s.queries.UpdateFileSize(ctx, sqlc.UpdateFileSizeParams{
 		Size: size,
 		ID:   fileID.String(),
+	})
+}
+
+func (s *service) UpdatePlaybackProgress(fileID uuid.UUID, progress int) error {
+	ctx := context.Background()
+	return s.queries.UpdatePlaybackProgress(ctx, sqlc.UpdatePlaybackProgressParams{
+		PlaybackProgress: int64(progress),
+		ID:               fileID.String(),
 	})
 }

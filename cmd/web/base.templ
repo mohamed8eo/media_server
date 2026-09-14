@@ -7,6 +7,20 @@ templ Base() {
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width,initial-scale=1"/>
 			<title>Media Server</title>
+			<link rel="manifest" href="/assets/manifest.json"/>
+			<meta name="theme-color" content="#090d16"/>
+			<meta name="apple-mobile-web-app-capable" content="yes"/>
+			<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+			<meta name="apple-mobile-web-app-title" content="MediaVault"/>
+			<link rel="apple-touch-icon" href="/assets/icons/icon-192.png"/>
+			<script>
+				if ('serviceWorker' in navigator) {
+					window.addEventListener('load', () => {
+						navigator.serviceWorker.register('/assets/sw.js')
+							.catch(err => console.error('SW registration failed:', err));
+					});
+				}
+			</script>
 			<script>
 				if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
 					document.documentElement.classList.add('dark');
@@ -170,7 +184,7 @@ templ Base() {
 					origWarn.apply(console, args);
 				};
 			</script>
-			<script src="/assets/js/htmx.min.js"></script>
+			<script src={ "/assets/js/htmx.min.js?v=" + AssetVersion }></script>
 			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 			<script>
 				document.addEventListener('htmx:responseError', async function(evt) {
@@ -259,7 +273,7 @@ templ Base() {
 		<div id="alert-dialog-root"></div>
 		<!-- File viewer modal root -->
 		<div id="file-viewer-root"></div>
-		<script src="/assets/js/dialog.js"></script>
+		<script src={ "/assets/js/dialog.js?v=" + AssetVersion }></script>
 		</body>
 	</html>
 }

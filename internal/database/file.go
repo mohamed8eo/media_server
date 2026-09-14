@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"path/filepath"
 	"strings"
 	"time"
@@ -27,7 +28,7 @@ func normalizeFolder(folder string) string {
 	return cleaned
 }
 
-func (s *service) CreateFile(id, userID uuid.UUID, filename, mimeType string, size int64, folder string, storagePath string) error {
+func (s *service) CreateFile(id, userID uuid.UUID, filename, mimeType string, size int64, folder string, storagePath string, sha256 string) error {
 	folder = normalizeFolder(folder)
 	ctx := context.Background()
 	return s.queries.CreateFile(ctx, sqlc.CreateFileParams{
@@ -38,7 +39,52 @@ func (s *service) CreateFile(id, userID uuid.UUID, filename, mimeType string, si
 		Size:        size,
 		Folder:      folder,
 		StoragePath: storagePath,
+		Sha256:      sql.NullString{String: sha256, Valid: sha256 != ""},
 	})
+}
+
+func (s *service) GetFileByUserAndSHA256(userID uuid.UUID, sha256 string) (*models.File, error) {
+	if sha256 == "" {
+		return nil, sql.ErrNoRows
+	}
+	ctx := context.Background()
+	f, err := s.queries.GetFileByUserAndSHA256(ctx, sqlc.GetFileByUserAndSHA256Params{
+		UserID: userID.String(),
+		Sha256: sql.NullString{String: sha256, Valid: true},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	fid, _ := uuid.Parse(f.ID)
+	uid, _ := uuid.Parse(f.UserID)
+	var createdAt time.Time
+	if f.CreatedAt.Valid {
+		createdAt = f.CreatedAt.Time
+	}
+	var lastAccessed *time.Time
+	if f.LastAccessed.Valid {
+		t := f.LastAccessed.Time
+		lastAccessed = &t
+	}
+	var shaVal string
+	if f.Sha256.Valid {
+		shaVal = f.Sha256.String
+	}
+
+	return &models.File{
+		ID:               fid,
+		UserID:           uid,
+		Filename:         f.Filename,
+		MimeType:         f.MimeType,
+		Size:             f.Size,
+		Folder:           normalizeFolder(f.Folder),
+		StoragePath:      f.StoragePath,
+		PlaybackProgress: int(f.PlaybackProgress.Int64),
+		SHA256:           shaVal,
+		CreatedAt:        createdAt,
+		LastAccessed:     lastAccessed,
+	}, nil
 }
 
 func (s *service) ListFilesByUser(userID uuid.UUID) ([]models.File, error) {
@@ -70,7 +116,8 @@ func (s *service) ListFilesByUser(userID uuid.UUID) ([]models.File, error) {
 			Size:             f.Size,
 			Folder:           normalizeFolder(f.Folder),
 			StoragePath:      f.StoragePath,
-			PlaybackProgress: int(f.PlaybackProgress),
+			PlaybackProgress: int(f.PlaybackProgress.Int64),
+			SHA256:           f.Sha256.String,
 			CreatedAt:        createdAt,
 			LastAccessed:     lastAccessed,
 		})
@@ -105,7 +152,8 @@ func (s *service) GetFileByID(fileID uuid.UUID) (*models.File, error) {
 		Size:             f.Size,
 		Folder:           normalizeFolder(f.Folder),
 		StoragePath:      f.StoragePath,
-		PlaybackProgress: int(f.PlaybackProgress),
+		PlaybackProgress: int(f.PlaybackProgress.Int64),
+		SHA256:           f.Sha256.String,
 		CreatedAt:        createdAt,
 		LastAccessed:     lastAccessed,
 	}, nil
@@ -151,7 +199,8 @@ func (s *service) ListRecentUploads(userID uuid.UUID, limit int) ([]models.File,
 			Size:             f.Size,
 			Folder:           normalizeFolder(f.Folder),
 			StoragePath:      f.StoragePath,
-			PlaybackProgress: int(f.PlaybackProgress),
+			PlaybackProgress: int(f.PlaybackProgress.Int64),
+			SHA256:           f.Sha256.String,
 			CreatedAt:        createdAt,
 			LastAccessed:     lastAccessed,
 		})
@@ -194,7 +243,8 @@ func (s *service) ListRecentlyPlayed(userID uuid.UUID, limit int) ([]models.File
 			Size:             f.Size,
 			Folder:           normalizeFolder(f.Folder),
 			StoragePath:      f.StoragePath,
-			PlaybackProgress: int(f.PlaybackProgress),
+			PlaybackProgress: int(f.PlaybackProgress.Int64),
+			SHA256:           f.Sha256.String,
 			CreatedAt:        createdAt,
 			LastAccessed:     lastAccessed,
 		})
@@ -267,7 +317,7 @@ func (s *service) UpdateFileSize(fileID uuid.UUID, size int64) error {
 func (s *service) UpdatePlaybackProgress(fileID uuid.UUID, progress int) error {
 	ctx := context.Background()
 	return s.queries.UpdatePlaybackProgress(ctx, sqlc.UpdatePlaybackProgressParams{
-		PlaybackProgress: int64(progress),
+		PlaybackProgress: sql.NullInt64{Int64: int64(progress), Valid: true},
 		ID:               fileID.String(),
 	})
 }

@@ -3,6 +3,8 @@ package files
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -237,6 +239,14 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 		}
 
 		_ = h.ensureFolderHierarchy(userID, dbFolder)
+		var fileHash string
+		if f, err := os.Open(finalFilePath); err == nil {
+			hsh := sha256.New()
+			_, _ = io.Copy(hsh, f)
+			f.Close()
+			fileHash = hex.EncodeToString(hsh.Sum(nil))
+		}
+
 		if err := h.db.CreateFile(
 			fileID,
 			userID,
@@ -245,6 +255,7 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 			info.Size(),
 			dbFolder,
 			finalFilePath,
+			fileHash,
 		); err != nil {
 			slog.Error("failed to create file record", "error", err)
 			_ = h.db.UpdateJobStatus(jobID, "failed", "failed to save file record")

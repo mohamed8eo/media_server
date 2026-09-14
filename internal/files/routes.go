@@ -3,6 +3,8 @@ package files
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -105,6 +107,7 @@ func (h *FileHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	var fileID uuid.UUID
 	var written int64
 	var fileSaved bool
+	var fileHash string
 
 	for {
 		part, err := reader.NextPart()
@@ -172,14 +175,35 @@ func (h *FileHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			hashWriter := sha256.New()
+			multiWriter := io.MultiWriter(dest, hashWriter)
+
 			buf := make([]byte, 256*1024)
-			written, err = io.CopyBuffer(dest, part, buf)
+			written, err = io.CopyBuffer(multiWriter, part, buf)
 			dest.Close()
 			if err != nil {
 				os.Remove(destPath)
 				utils.RespondWithError(w, http.StatusInternalServerError, "Failed to write file")
 				return
 			}
+
+			fileHash = hex.EncodeToString(hashWriter.Sum(nil))
+
+			existingFile, err := h.db.GetFileByUserAndSHA256(userID, fileHash)
+			if err == nil && existingFile != nil {
+				os.Remove(destPath)
+				uploadedAtStr := "earlier"
+				if !existingFile.CreatedAt.IsZero() {
+					uploadedAtStr = existingFile.CreatedAt.Format("Jan 2, 2006 at 3:04 PM")
+				}
+				utils.RespondWithError(w, http.StatusConflict, fmt.Sprintf(
+					"This file already exists in your library as '%s' (uploaded on %s)",
+					existingFile.Filename,
+					uploadedAtStr,
+				))
+				return
+			}
+
 			fileSaved = true
 		}
 	}
@@ -207,6 +231,7 @@ func (h *FileHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		written,
 		dbFolder,
 		destPath,
+		fileHash,
 	); err != nil {
 		os.Remove(destPath)
 		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to save file record")

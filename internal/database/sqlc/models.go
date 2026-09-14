@@ -21,6 +21,7 @@ type File struct {
 	CreatedAt        sql.NullTime
 	DeletedAt        sql.NullTime
 	PlaybackProgress sql.NullInt64
+	Sha256           sql.NullString
 }
 
 type Folder struct {

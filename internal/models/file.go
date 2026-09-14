@@ -18,6 +18,7 @@ type File struct {
 	Folder           string    `json:"folder"`
 	StoragePath      string    `json:"-"`
 	PlaybackProgress int       `json:"playback_progress"`
+	SHA256           string    `json:"sha256,omitempty"`
 	CreatedAt        time.Time `json:"created_at"`
 	LastAccessed     *time.Time `json:"last_accessed"`
 	DeletedAt        *time.Time `json:"deleted_at,omitempty"`

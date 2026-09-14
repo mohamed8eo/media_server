@@ -35,9 +35,10 @@ type Service interface {
 	GetRefreshToken(token string) (*models.RefreshToken, error)
 	RevokeRefreshToken(token string) error
 	RevokeAllUserRefreshTokens(userID uuid.UUID) error
-	CreateFile(id, userID uuid.UUID, filename, mimeType string, size int64, folder string, storagePath string) error
+	CreateFile(id, userID uuid.UUID, filename, mimeType string, size int64, folder string, storagePath string, sha256 string) error
 	ListFilesByUser(userID uuid.UUID) ([]models.File, error)
 	GetFileByID(fileID uuid.UUID) (*models.File, error)
+	GetFileByUserAndSHA256(userID uuid.UUID, sha256 string) (*models.File, error)
 	UpdateLastAccessed(fileID uuid.UUID) error
 	ListRecentUploads(userID uuid.UUID, limit int) ([]models.File, error)
 	ListRecentlyPlayed(userID uuid.UUID, limit int) ([]models.File, error)

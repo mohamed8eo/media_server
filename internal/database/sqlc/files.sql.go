@@ -11,7 +11,7 @@ import (
 )
 
 const createFile = `-- name: CreateFile :exec
-INSERT INTO files (id, user_id, filename, mime_type, size, folder, storage_path) VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO files (id, user_id, filename, mime_type, size, folder, storage_path, sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateFileParams struct {
@@ -22,6 +22,7 @@ type CreateFileParams struct {
 	Size        int64
 	Folder      string
 	StoragePath string
+	Sha256      sql.NullString
 }
 
 func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) error {
@@ -33,6 +34,7 @@ func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) error {
 		arg.Size,
 		arg.Folder,
 		arg.StoragePath,
+		arg.Sha256,
 	)
 	return err
 }
@@ -47,7 +49,7 @@ func (q *Queries) DeleteFile(ctx context.Context, id string) error {
 }
 
 const getFileByID = `-- name: GetFileByID :one
-SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress FROM files WHERE id = ?
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress, sha256 FROM files WHERE id = ?
 `
 
 type GetFileByIDRow struct {
@@ -60,7 +62,8 @@ type GetFileByIDRow struct {
 	StoragePath      string
 	CreatedAt        sql.NullTime
 	LastAccessed     sql.NullTime
-	PlaybackProgress int64
+	PlaybackProgress sql.NullInt64
+	Sha256           sql.NullString
 }
 
 func (q *Queries) GetFileByID(ctx context.Context, id string) (GetFileByIDRow, error) {
@@ -77,6 +80,49 @@ func (q *Queries) GetFileByID(ctx context.Context, id string) (GetFileByIDRow, e
 		&i.CreatedAt,
 		&i.LastAccessed,
 		&i.PlaybackProgress,
+		&i.Sha256,
+	)
+	return i, err
+}
+
+const getFileByUserAndSHA256 = `-- name: GetFileByUserAndSHA256 :one
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress, sha256 FROM files WHERE user_id = ? AND sha256 = ? AND deleted_at IS NULL LIMIT 1
+`
+
+type GetFileByUserAndSHA256Params struct {
+	UserID string
+	Sha256 sql.NullString
+}
+
+type GetFileByUserAndSHA256Row struct {
+	ID               string
+	UserID           string
+	Filename         string
+	MimeType         string
+	Size             int64
+	Folder           string
+	StoragePath      string
+	CreatedAt        sql.NullTime
+	LastAccessed     sql.NullTime
+	PlaybackProgress sql.NullInt64
+	Sha256           sql.NullString
+}
+
+func (q *Queries) GetFileByUserAndSHA256(ctx context.Context, arg GetFileByUserAndSHA256Params) (GetFileByUserAndSHA256Row, error) {
+	row := q.db.QueryRowContext(ctx, getFileByUserAndSHA256, arg.UserID, arg.Sha256)
+	var i GetFileByUserAndSHA256Row
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Filename,
+		&i.MimeType,
+		&i.Size,
+		&i.Folder,
+		&i.StoragePath,
+		&i.CreatedAt,
+		&i.LastAccessed,
+		&i.PlaybackProgress,
+		&i.Sha256,
 	)
 	return i, err
 }
@@ -136,7 +182,7 @@ func (q *Queries) GetUserStorageUsage(ctx context.Context, userID string) (inter
 }
 
 const listFilesByUser = `-- name: ListFilesByUser :many
-SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress FROM files WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress, sha256 FROM files WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC
 `
 
 type ListFilesByUserRow struct {
@@ -149,7 +195,8 @@ type ListFilesByUserRow struct {
 	StoragePath      string
 	CreatedAt        sql.NullTime
 	LastAccessed     sql.NullTime
-	PlaybackProgress int64
+	PlaybackProgress sql.NullInt64
+	Sha256           sql.NullString
 }
 
 func (q *Queries) ListFilesByUser(ctx context.Context, userID string) ([]ListFilesByUserRow, error) {
@@ -172,6 +219,7 @@ func (q *Queries) ListFilesByUser(ctx context.Context, userID string) ([]ListFil
 			&i.CreatedAt,
 			&i.LastAccessed,
 			&i.PlaybackProgress,
+			&i.Sha256,
 		); err != nil {
 			return nil, err
 		}
@@ -214,7 +262,7 @@ func (q *Queries) ListMimeTypesByUser(ctx context.Context, userID string) ([]str
 }
 
 const listRecentUploads = `-- name: ListRecentUploads :many
-SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress FROM files WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress, sha256 FROM files WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?
 `
 
 type ListRecentUploadsParams struct {
@@ -232,7 +280,8 @@ type ListRecentUploadsRow struct {
 	StoragePath      string
 	CreatedAt        sql.NullTime
 	LastAccessed     sql.NullTime
-	PlaybackProgress int64
+	PlaybackProgress sql.NullInt64
+	Sha256           sql.NullString
 }
 
 func (q *Queries) ListRecentUploads(ctx context.Context, arg ListRecentUploadsParams) ([]ListRecentUploadsRow, error) {
@@ -255,6 +304,7 @@ func (q *Queries) ListRecentUploads(ctx context.Context, arg ListRecentUploadsPa
 			&i.CreatedAt,
 			&i.LastAccessed,
 			&i.PlaybackProgress,
+			&i.Sha256,
 		); err != nil {
 			return nil, err
 		}
@@ -270,7 +320,7 @@ func (q *Queries) ListRecentUploads(ctx context.Context, arg ListRecentUploadsPa
 }
 
 const listRecentlyPlayed = `-- name: ListRecentlyPlayed :many
-SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress FROM files WHERE user_id = ? AND deleted_at IS NULL AND last_accessed IS NOT NULL ORDER BY last_accessed DESC LIMIT ?
+SELECT id, user_id, filename, mime_type, size, folder, storage_path, created_at, last_accessed, playback_progress, sha256 FROM files WHERE user_id = ? AND deleted_at IS NULL AND last_accessed IS NOT NULL ORDER BY last_accessed DESC LIMIT ?
 `
 
 type ListRecentlyPlayedParams struct {
@@ -288,7 +338,8 @@ type ListRecentlyPlayedRow struct {
 	StoragePath      string
 	CreatedAt        sql.NullTime
 	LastAccessed     sql.NullTime
-	PlaybackProgress int64
+	PlaybackProgress sql.NullInt64
+	Sha256           sql.NullString
 }
 
 func (q *Queries) ListRecentlyPlayed(ctx context.Context, arg ListRecentlyPlayedParams) ([]ListRecentlyPlayedRow, error) {
@@ -311,6 +362,7 @@ func (q *Queries) ListRecentlyPlayed(ctx context.Context, arg ListRecentlyPlayed
 			&i.CreatedAt,
 			&i.LastAccessed,
 			&i.PlaybackProgress,
+			&i.Sha256,
 		); err != nil {
 			return nil, err
 		}
@@ -383,7 +435,7 @@ UPDATE files SET playback_progress = ? WHERE id = ?
 `
 
 type UpdatePlaybackProgressParams struct {
-	PlaybackProgress int64
+	PlaybackProgress sql.NullInt64
 	ID               string
 }
 

@@ -121,8 +121,8 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SetAuthCookie(w, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
-	SetAuthCookie(w, "refresh_token", refreshToken, int(RefreshTokenDuration.Seconds()))
+	SetAuthCookie(w, r, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
+	SetAuthCookie(w, r, "refresh_token", refreshToken, int(RefreshTokenDuration.Seconds()))
 
 	// HTMX response.
 	if isHTMX(r) {
@@ -213,8 +213,8 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SetAuthCookie(w, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
-	SetAuthCookie(w, "refresh_token", refreshToken, int(RefreshTokenDuration.Seconds()))
+	SetAuthCookie(w, r, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
+	SetAuthCookie(w, r, "refresh_token", refreshToken, int(RefreshTokenDuration.Seconds()))
 
 	// HTMX response.
 	if isHTMX(r) {
@@ -251,8 +251,8 @@ func (h *AuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		slog.Info("auth.token.revoked", "ip", r.RemoteAddr)
 	}
 
-	SetAuthCookie(w, "access_token", "", -1)
-	SetAuthCookie(w, "refresh_token", "", -1)
+	SetAuthCookie(w, r, "access_token", "", -1)
+	SetAuthCookie(w, r, "refresh_token", "", -1)
 
 	if isHTMX(r) {
 		w.Header().Set("HX-Redirect", "/sign-in")
@@ -422,7 +422,7 @@ func (h *AuthHandler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SetAuthCookie(w, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
+	SetAuthCookie(w, r, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
 
 	if isHTMX(r) {
 		w.WriteHeader(http.StatusOK)

@@ -59,6 +59,9 @@ Create a `.env` file in the project root (used by both `go run` and `docker comp
 # Web server port
 PORT=8080
 
+# Deployment environment: local (plain HTTP, non-Secure cookies) or prod
+APP_ENV=local
+
 # JWT signing key. Treat this as a PERMANENT master key:
 # changing it invalidates every existing session and forces all
 # users to sign in again. Generate once with:
@@ -75,6 +78,7 @@ BLUEPRINT_DB_URL=file:./db/mediavault.db?_journal_mode=WAL&_synchronous=NORMAL&_
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `PORT` | no | `8080` | HTTP port |
+| `APP_ENV` | no | `local` | `local` or `prod`; controls deployment behavior (Secure cookies follow the request scheme over HTTPS) |
 | `JWT_SECRET` | yes | — | Access/refresh token signing key. **Keep it stable across rebuilds.** |
 | `DATA_DIR` | no | `/var/lib/.ms-data` | Host path bound into the container for the DB and storage |
 | `BLUEPRINT_DB_URL` | yes | — | SQLite DSN (`file:` prefix, relative to the working dir) |

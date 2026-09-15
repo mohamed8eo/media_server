@@ -2,7 +2,7 @@ package auth
 
 import (
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
 	"mediaserver/internal/database"
@@ -33,18 +33,22 @@ func RefreshAccessFromCookie(w http.ResponseWriter, r *http.Request, db database
 		return uuid.Nil, "", false
 	}
 
-	SetAuthCookie(w, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
+	SetAuthCookie(w, r, "access_token", accessToken, int(AccessTokenDuration.Seconds()))
 	return claims.UserID, accessToken, true
 }
 
-// SetAuthCookie writes an HttpOnly auth cookie.
-func SetAuthCookie(w http.ResponseWriter, tokenName, token string, maxAge int) {
+// SetAuthCookie writes an HttpOnly auth cookie. The Secure flag follows the
+// actual request scheme: TLS (or the X-Forwarded-Proto header from a reverse
+// proxy) marks the cookie Secure, while plain HTTP keeps it usable on any
+// origin (localhost, LAN IP, etc.).
+func SetAuthCookie(w http.ResponseWriter, r *http.Request, tokenName, token string, maxAge int) {
+	secure := r != nil && (r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https"))
 	http.SetCookie(w, &http.Cookie{
 		Name:     tokenName,
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   os.Getenv("APP_ENV") != "local",
+		Secure:   secure,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   maxAge,
 	})

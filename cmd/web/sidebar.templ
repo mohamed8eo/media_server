@@ -29,7 +29,7 @@ templ Sidebar(currentPage string) {
 				@icons.FileText(templ.Attributes{"class": "h-4 w-4"})
 				Documents
 			</a>
-			<a href="/upload?folder={{currentFolder}}" data-nav="upload" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100">
+			<a href="/upload" data-nav="upload" class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100">
 				@icons.Upload(templ.Attributes{"class": "h-4 w-4"})
 				Upload
 			</a>

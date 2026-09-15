@@ -42,7 +42,8 @@ async function loadFolderOptions(selectEl) {
         const res = await fetch('/api/file/', { method: 'GET', credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
-        const folders = data.folders || ['/'];
+        const rawFolders = data.folders || ['/'];
+        const folders = rawFolders.map(x => typeof x === 'string' ? x : x.path);
         if (!folders.includes('/')) folders.unshift('/');
 
         const urlFolder = new URLSearchParams(window.location.search).get('folder');

@@ -54,7 +54,7 @@ templ AppShell(currentPage string, title string, subtitle string) {
 						@icons.FolderPlus(templ.Attributes{"class": "h-4 w-4"})
 						<span>New Folder</span>
 					</button>
-					<a href="/upload?folder={{currentFolder}}" data-nav="upload" class="hidden sm:inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-3.5 cursor-pointer" title="Upload">
+					<a href="/upload" data-nav="upload" class="hidden sm:inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-3.5 cursor-pointer" title="Upload">
 						@icons.Upload(templ.Attributes{"class": "h-4 w-4"})
 						<span>Upload</span>
 					</a>
@@ -105,7 +105,7 @@ templ AppShell(currentPage string, title string, subtitle string) {
 					@icons.FileText(templ.Attributes{"class": "h-5 w-5"})
 					<span>Docs</span>
 				</a>
-				<a href="/upload?folder={{currentFolder}}" data-nav="upload" class="flex flex-col items-center justify-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors w-12 h-full">
+				<a href="/upload" data-nav="upload" class="flex flex-col items-center justify-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors w-12 h-full">
 					@icons.Upload(templ.Attributes{"class": "h-5 w-5"})
 					<span>Upload</span>
 				</a>

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -88,6 +89,29 @@ type service struct {
 
 var dbInstance *service
 
+// ensureDBDir creates the parent directory of a file-based SQLite DSN so that
+// sqlite3 can actually create the database file instead of failing with
+// "unable to open database file". In-memory and non-file DSNs are skipped.
+func ensureDBDir(dburl string) {
+	if strings.Contains(dburl, "mode=memory") {
+		return
+	}
+	path := strings.TrimPrefix(dburl, "file:")
+	if i := strings.IndexByte(path, '?'); i >= 0 {
+		path = path[:i]
+	}
+	if path == "" {
+		return
+	}
+	dir := filepath.Dir(path)
+	if dir == "." || dir == "" {
+		return
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		slog.Warn("failed to create database directory", "dir", dir, "error", err)
+	}
+}
+
 func New() Service {
 	// Reuse Connection
 	if dbInstance != nil {
@@ -107,6 +131,8 @@ func New() Service {
 			dburl += "?_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=5000"
 		}
 	}
+
+	ensureDBDir(dburl)
 
 	db, err := sql.Open("sqlite3", dburl)
 	if err != nil {

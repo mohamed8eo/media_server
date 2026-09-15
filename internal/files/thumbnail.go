@@ -212,10 +212,11 @@ func generatePDFThumb(inputPath, outputPath string) error {
 	prefix := strings.TrimSuffix(outputPath, filepath.Ext(outputPath))
 	args := []string{
 		"-jpeg",
+		"-jpegopt", "quality=90",
 		"-f", "1",
 		"-l", "1",
 		"-singlefile",
-		"-scale-to", "320",
+		"-scale-to", "2400",
 		inputPath,
 		prefix,
 	}

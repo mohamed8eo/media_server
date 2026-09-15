@@ -70,7 +70,7 @@ templ AppShell(currentPage string, title string, subtitle string) {
 			</header>
 
 			<!-- Main Content Wrapper -->
-			<main id="main-content" hx-on::after-swap="if(typeof initFileBrowser === 'function') initFileBrowser(); if(typeof setupDropOverlay === 'function') setupDropOverlay(); if(typeof updateNavActive === 'function') updateNavActive();" class="min-w-0 flex-1 space-y-6 overflow-x-hidden p-3 pb-24 sm:p-6 sm:pb-24 md:p-8 md:pb-8">
+			<main id="main-content" hx-on::after-swap="if(typeof initFileBrowser === 'function') initFileBrowser(); if(typeof updateNavActive === 'function') updateNavActive();" class="min-w-0 flex-1 space-y-6 overflow-x-hidden p-3 pb-24 sm:p-6 sm:pb-24 md:p-8 md:pb-8">
 				if title != "" {
 					<div class="mb-7 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
 						<div class="min-w-0">

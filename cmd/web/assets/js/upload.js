@@ -60,23 +60,6 @@ async function loadFolderOptions(selectEl) {
     } catch (e) {}
 }
 
-function setupDropOverlay() {
-    const overlay = document.getElementById('drop-overlay');
-    if (!overlay) return;
-    let dragCount = 0;
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        document.addEventListener(eventName, preventDefaults, false);
-    });
-    document.addEventListener('dragenter', () => { dragCount++; if (dragCount === 1) overlay.classList.remove('hidden'); });
-    document.addEventListener('dragleave', () => { dragCount--; if (dragCount <= 0) { dragCount = 0; overlay.classList.add('hidden'); } });
-    document.addEventListener('drop', (e) => {
-        dragCount = 0; overlay.classList.add('hidden');
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            window.location.href = '/upload';
-        }
-    });
-}
-
 function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
 
 let uploadedCount = 0;

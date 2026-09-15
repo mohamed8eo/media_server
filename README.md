@@ -51,6 +51,36 @@ docker compose up --build
 
 MediaServer runs at `http://localhost:8080` (configurable via `PORT` env var).
 
+## Environment variables
+
+Create a `.env` file in the project root (used by both `go run` and `docker compose`):
+
+```env
+# Web server port
+PORT=8080
+
+# JWT signing key. Treat this as a PERMANENT master key:
+# changing it invalidates every existing session and forces all
+# users to sign in again. Generate once with:
+#   openssl rand -base64 48
+JWT_SECRET=replace-with-a-long-random-secret
+
+# Host directory where persistent data (SQLite DB + uploads) is stored
+DATA_DIR=/mnt/mediaserver-ssd/data
+
+# SQLite connection string (local runs only; Docker overrides this)
+BLUEPRINT_DB_URL=file:./db/mediavault.db?_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=5000
+```
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `PORT` | no | `8080` | HTTP port |
+| `JWT_SECRET` | yes | — | Access/refresh token signing key. **Keep it stable across rebuilds.** |
+| `DATA_DIR` | no | `/var/lib/.ms-data` | Host path bound into the container for the DB and storage |
+| `BLUEPRINT_DB_URL` | yes | — | SQLite DSN (`file:` prefix, relative to the working dir) |
+
+The database and uploaded files live on disk at `$DATA_DIR` and are **not** wiped by `docker compose up --build` — only `remove --purge-data` deletes them.
+
 ## CLI Reference
 
 | Command | Description |

@@ -6,10 +6,8 @@ templ Sidebar(currentPage string) {
 	<aside class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-card border-border dark:bg-[#0d1322] dark:border-slate-800/80">
 		<!-- Logo -->
 		<div class="flex h-14 items-center gap-2.5 border-b px-5 border-border dark:border-slate-800/80">
-			<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-				@icons.Play(templ.Attributes{"class": "h-4 w-4"})
-			</div>
-			<span class="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">MediaVault</span>
+			<img src="/assets/icons/icon-192.png" alt="Trove" class="h-8 w-8 shrink-0 rounded-lg object-cover shadow-sm"/>
+			<span class="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Trove</span>
 		</div>
 		<!-- Navigation -->
 		<nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1.5" id="sidebar-nav">

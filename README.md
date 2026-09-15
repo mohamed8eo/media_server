@@ -1,6 +1,6 @@
-# MediaServer
+# Trove
 
-Self-hosted media library management system. Browse, stream, and organize your media collection with a modern web interface.
+Self-hosted media vault. Browse, stream, and organize your media collection with a modern web interface.
 
 ## Features
 

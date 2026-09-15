@@ -618,7 +618,7 @@ function renderGridCard(f) {
                 </div>
                 <span class="shrink-0 rounded-md bg-accent px-2 py-1 text-[10px] font-bold text-accent-foreground">${badge}</span>
             </div>
-            <p class="mt-3 truncate text-xs text-muted-foreground">MediaVault ${escapeHtml(normalizeFolder(f.folder || '/').replace(/^\//, '/ ').replace(/\//g, ' / '))}</p>
+            <p class="mt-3 truncate text-xs text-muted-foreground">Trove ${escapeHtml(normalizeFolder(f.folder || '/').replace(/^\//, '/ ').replace(/\//g, ' / '))}</p>
         </div>
     </div>`;
 }

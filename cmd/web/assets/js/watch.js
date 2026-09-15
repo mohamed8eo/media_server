@@ -116,10 +116,10 @@
         player.src = `/api/file/${encodeURIComponent(video.id)}`;
         player.load();
         title.textContent = displayName(video.filename);
-        meta.textContent = `${formatSize(video.size)} · MediaVault ${normalFolder(video.folder)}`;
+        meta.textContent = `${formatSize(video.size)} · Trove ${normalFolder(video.folder)}`;
         if (badge) badge.textContent = typeBadge(video.mime_type);
         download.href = `/api/file/${encodeURIComponent(video.id)}`;
-        document.title = `${displayName(video.filename)} · Media Server`;
+        document.title = `${displayName(video.filename)} · Trove`;
         if (updateHistory) history.pushState({ videoID: id }, '', `/watch/${encodeURIComponent(id)}`);
         renderQueue();
         

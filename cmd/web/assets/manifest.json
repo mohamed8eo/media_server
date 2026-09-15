@@ -1,6 +1,6 @@
 {
-  "name": "Media Server",
-  "short_name": "MediaVault",
+  "name": "Trove",
+  "short_name": "Trove",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#090d16",

@@ -8,6 +8,7 @@ let isTrashView = new URLSearchParams(window.location.search).get('trash') === '
 let currentView = localStorage.getItem('file_view') || 'grid';
 let currentFilter = new URLSearchParams(window.location.search).get('type') || 'all';
 let currentFolder = new URLSearchParams(window.location.search).get('folder') || '/';
+let browserListenersAttached = false;
 
 document.addEventListener('mediaUpdated', () => {
     if (typeof fetchFiles === 'function') {
@@ -80,7 +81,6 @@ function initFileBrowser() {
     currentFolder = new URLSearchParams(window.location.search).get('folder') || '/';
     setFileView(currentView, false);
     setFilter(currentFilter, false);
-    if (typeof updateSidebarActive === 'function') updateSidebarActive();
     if (typeof updateNavActive === 'function') updateNavActive();
     if (allFiles.length > 0) {
         renderAll();
@@ -89,20 +89,23 @@ function initFileBrowser() {
         fetchFiles();
     }
 
-    const searchInput = document.getElementById('file-search');
-    if (searchInput) searchInput.addEventListener('input', () => renderFiles());
-    const sortSelect = document.getElementById('file-sort');
-    if (sortSelect) sortSelect.addEventListener('change', () => renderFiles());
+    if (!browserListenersAttached) {
+        browserListenersAttached = true;
+        const searchInput = document.getElementById('file-search');
+        if (searchInput) searchInput.addEventListener('input', () => renderFiles());
+        const sortSelect = document.getElementById('file-sort');
+        if (sortSelect) sortSelect.addEventListener('change', () => renderFiles());
 
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('[data-dropdown-menu]')) {
-            document.querySelectorAll('[data-dropdown-content]').forEach(el => {
-                el.classList.add('hidden');
-                const parentCard = el.closest('[data-file-id]') || el.closest('.folder-card') || el.closest('.group');
-                if (parentCard) parentCard.classList.remove('z-30', 'z-[100]', 'relative');
-            });
-        }
-    });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('[data-dropdown-menu]')) {
+                document.querySelectorAll('[data-dropdown-content]').forEach(el => {
+                    el.classList.add('hidden');
+                    const parentCard = el.closest('[data-file-id]') || el.closest('.folder-card') || el.closest('.group');
+                    if (parentCard) parentCard.classList.remove('z-30', 'z-[100]', 'relative');
+                });
+            }
+        });
+    }
 
     // Update folder select on upload page to reflect current folder
     if (typeof updateUploadFolderSelect === 'function') updateUploadFolderSelect();

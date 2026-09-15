@@ -288,9 +288,9 @@ templ Base() {
 			@drop.window.prevent="isDragging = false; dragCounter = 0; handleGlobalDrop($event)"
 			class="min-h-screen overflow-x-hidden bg-background font-sans antialiased text-slate-900 dark:text-slate-100"
 		>
-			<main>
+			<div>
 				{ children... }
-			</main>
+			</div>
 		<!-- Global Drag and Drop Overlay -->
 		<div 
 			x-show="isDragging"

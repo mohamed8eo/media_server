@@ -296,6 +296,7 @@ function navigateToFolder(path) {
     const qs = params.toString();
     window.history.pushState({}, '', qs ? '?' + qs : '/');
     renderAll();
+    if (typeof updateDropFolderDisplay === 'function') updateDropFolderDisplay();
 }
 
 window.addEventListener('popstate', () => {
@@ -1070,7 +1071,15 @@ async function fetchFiles() {
     }
     try {
         const res = await fetch(isTrashView ? '/api/file/trash' : '/api/file/', { method: 'GET', credentials: 'include' });
-        if (!res.ok) { if (res.status === 401) return; throw new Error('Failed to fetch files'); }
+        if (!res.ok) {
+            if (res.status === 401) {
+                if (allFiles.length === 0 && loadingEl) {
+                    loadingEl.innerHTML = '<p class="text-sm text-destructive font-medium">Session expired. Please sign in again.</p>';
+                }
+                return;
+            }
+            throw new Error('Failed to fetch files');
+        }
         const data = await res.json();
         let filesChanged = false;
         let jobsCountChanged = false;
@@ -1282,3 +1291,9 @@ function renderJobRow(j) {
         </div>
     </div>`;
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('file-grid') || document.getElementById('file-container')) {
+        initFileBrowser();
+    }
+});

@@ -342,3 +342,9 @@ function pollJobStatus(jobId, itemStatusEl, itemProgressEl, statusEl, onFinished
         } catch (e) {}
     }, 1500);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('dropzone') || document.getElementById('file-input')) {
+        initUploadPage();
+    }
+});

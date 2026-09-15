@@ -151,5 +151,7 @@ templ AppShell(currentPage string, title string, subtitle string) {
 			updateNavActive();
 			window.addEventListener('popstate', updateNavActive);
 		</script>
+		<script src={ "/assets/js/browser.js?v=" + AssetVersion }></script>
+		<script src={ "/assets/js/upload.js?v=" + AssetVersion }></script>
 	}
 }

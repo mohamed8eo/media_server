@@ -62,9 +62,9 @@ func (e *ThumbError) Error() string {
 func generateVideoThumb(inputPath, outputPath string) error {
 	args := []string{
 		"-i", inputPath,
-		"-vf", "select='eq(pict_type,I)',scale=320:-1",
+		"-vf", "select='eq(pict_type,I)',scale=1280:-2",
 		"-frames:v", "1",
-		"-q:v", "3",
+		"-q:v", "2",
 		"-y",
 		outputPath,
 	}
@@ -75,9 +75,9 @@ func generateVideoThumb(inputPath, outputPath string) error {
 		args2 := []string{
 			"-i", inputPath,
 			"-ss", "00:00:01",
-			"-vf", "scale=320:-1",
+			"-vf", "scale=1280:-2",
 			"-frames:v", "1",
-			"-q:v", "3",
+			"-q:v", "2",
 			"-y",
 			outputPath,
 		}

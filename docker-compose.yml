@@ -13,9 +13,13 @@ services:
       BLUEPRINT_DB_URL: file:/app/db/mediaserver.db
       STORAGE_PATH: /app/storage
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+      TLS_CERT_FILE: /app/localhost-cert.pem
+      TLS_KEY_FILE: /app/localhost-key.pem
     volumes:
       - ${DATA_DIR:-/var/lib/.ms-data}/db:/app/db
       - ${DATA_DIR:-/var/lib/.ms-data}/storage:/app/storage
+      - ./localhost-cert.pem:/app/localhost-cert.pem:ro
+      - ./localhost-key.pem:/app/localhost-key.pem:ro
     tmpfs:
       - /app/storage/temp:size=512M
     deploy:

@@ -1153,7 +1153,7 @@ function openFile(file) {
     if (cat === 'video') {
         window.location.href = '/watch/' + encodeURIComponent(file.id);
     } else if (cat === 'audio') {
-        window.location.href = '/api/file/' + encodeURIComponent(file.id);
+        window.location.href = '/listen/' + encodeURIComponent(file.id);
     } else if (cat === 'document') {
         window.location.href = '/reader/' + encodeURIComponent(file.id);
     } else if (cat === 'image') {

@@ -22,6 +22,10 @@ templ AppShell(currentPage string, title string, subtitle string) {
 							@icons.Video(templ.Attributes{"class": "h-4 w-4"})
 							Videos
 						</a>
+						<a href="/?type=audio" hx-get="/?type=audio" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="audio" class="inline-flex items-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100">
+							@icons.Music(templ.Attributes{"class": "h-4 w-4"})
+							Audio
+						</a>
 						<a href="/?type=image" hx-get="/?type=image" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="image" class="inline-flex items-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors px-3 h-8 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100">
 							@icons.Image(templ.Attributes{"class": "h-4 w-4"})
 							Images
@@ -119,6 +123,10 @@ templ AppShell(currentPage string, title string, subtitle string) {
 					@icons.Video(templ.Attributes{"class": "h-5 w-5"})
 					<span>Videos</span>
 				</a>
+				<a href="/?type=audio" hx-get="/?type=audio" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="audio" class="flex flex-col items-center justify-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors w-12 h-full">
+					@icons.Music(templ.Attributes{"class": "h-5 w-5"})
+					<span>Audio</span>
+				</a>
 				<a href="/?type=image" hx-get="/?type=image" hx-target="#main-content" hx-swap="innerHTML transition:true" hx-push-url="true" data-nav="image" class="flex flex-col items-center justify-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors w-12 h-full">
 					@icons.Image(templ.Attributes{"class": "h-5 w-5"})
 					<span>Images</span>
@@ -152,7 +160,9 @@ templ AppShell(currentPage string, title string, subtitle string) {
 				if (path === '/upload') active = 'upload';
 				else if (path === '/settings') active = 'settings';
 				else if (path.startsWith('/watch/')) active = 'video';
+				else if (path.startsWith('/listen/')) active = 'audio';
 				else if (type === 'video') active = 'video';
+				else if (type === 'audio') active = 'audio';
 				else if (type === 'image') active = 'image';
 				else if (type === 'document') active = 'document';
 

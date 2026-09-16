@@ -48,6 +48,31 @@ func (s *Server) WatchHandler(w http.ResponseWriter, r *http.Request) {
 	templ.Handler(web.Watch(*file)).ServeHTTP(w, r)
 }
 
+// AudioHandler renders a dedicated audio player for an audio file owned by the current user.
+func (s *Server) AudioHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		templ.Handler(web.AudioUnavailable()).ServeHTTP(w, r)
+		return
+	}
+
+	fileID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		templ.Handler(web.AudioUnavailable()).ServeHTTP(w, r)
+		return
+	}
+
+	file, err := s.db.GetFileByID(fileID)
+	if err != nil || file.UserID != userID || !strings.HasPrefix(strings.ToLower(file.MimeType), "audio/") {
+		w.WriteHeader(http.StatusNotFound)
+		templ.Handler(web.AudioUnavailable()).ServeHTTP(w, r)
+		return
+	}
+
+	templ.Handler(web.AudioPlayer(*file)).ServeHTTP(w, r)
+}
+
 // ReaderHandler renders a dedicated reader interface for a document owned by the current user.
 func (s *Server) ReaderHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)

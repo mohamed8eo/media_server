@@ -74,6 +74,7 @@ func NewRouter(db database.Service) http.Handler {
 	r.Get("/{id}", h.GetFileHandler)
 	r.Get("/{id}/{filename}", h.GetFileHandler)
 	r.Get("/{id}/thumb", h.ThumbnailHandler)
+	r.Get("/{id}/peaks", h.PeaksHandler)
 	r.Delete("/{id}", h.DeleteFileHandler)
 	r.Patch("/{id}/rename", h.RenameFileHandler)
 	r.Patch("/{id}/move", h.MoveFileHandler)
@@ -562,6 +563,54 @@ func (h *FileHandler) ThumbnailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.ServeContent(w, r, "thumb.jpg", info.ModTime(), f)
+}
+
+func (h *FileHandler) PeaksHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+
+	fileIDstr := chi.URLParam(r, "id")
+	fileID, err := uuid.Parse(fileIDstr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid file ID")
+		return
+	}
+
+	file, err := h.db.GetFileByID(fileID)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusNotFound, "File not found")
+		return
+	}
+
+	if file.UserID != userID {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	peaksPath, genErr := GeneratePeaks(file.StoragePath, file.MimeType)
+	if genErr != nil {
+		utils.RespondWithError(w, http.StatusNotFound, "Waveform peaks not available")
+		return
+	}
+
+	f, err := os.Open(peaksPath)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusNotFound, "Waveform peaks not available")
+		return
+	}
+	defer f.Close()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	info, err := f.Stat()
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to read file info")
+		return
+	}
+	http.ServeContent(w, r, "peaks.json", info.ModTime(), f)
 }
 
 type RecentResponse struct {

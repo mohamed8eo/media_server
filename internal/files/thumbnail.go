@@ -2,6 +2,7 @@ package files
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"image/jpeg"
 	_ "image/png"
@@ -60,6 +61,46 @@ func (e *ThumbError) Error() string {
 }
 
 func generateVideoThumb(inputPath, outputPath string) error {
+	var timestamps []string
+
+	duration := getVideoDuration(inputPath)
+	if duration > 10 {
+		targetSecs := duration * 0.15
+		if targetSecs > 600 {
+			targetSecs = 600
+		}
+		hours := int(targetSecs) / 3600
+		mins := (int(targetSecs) % 3600) / 60
+		secs := int(targetSecs) % 60
+		tsDynamic := fmt.Sprintf("%02d:%02d:%02d", hours, mins, secs)
+		timestamps = append(timestamps, tsDynamic)
+	}
+
+	timestamps = append(timestamps, "00:00:05", "00:00:03", "00:00:01", "00:00:00")
+	var lastErr error
+
+	for _, ts := range timestamps {
+		args := []string{
+			"-ss", ts,
+			"-i", inputPath,
+			"-vf", "scale=1280:-2",
+			"-frames:v", "1",
+			"-q:v", "2",
+			"-y",
+			outputPath,
+		}
+		cmd := exec.Command("ffmpeg", args...)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err == nil {
+			if fi, statErr := os.Stat(outputPath); statErr == nil && fi.Size() > 0 {
+				return nil
+			}
+		} else {
+			lastErr = err
+		}
+	}
+
 	args := []string{
 		"-i", inputPath,
 		"-vf", "select='eq(pict_type,I)',scale=1280:-2",
@@ -69,23 +110,11 @@ func generateVideoThumb(inputPath, outputPath string) error {
 		outputPath,
 	}
 	cmd := exec.Command("ffmpeg", args...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		args2 := []string{
-			"-i", inputPath,
-			"-ss", "00:00:01",
-			"-vf", "scale=1280:-2",
-			"-frames:v", "1",
-			"-q:v", "2",
-			"-y",
-			outputPath,
+		if lastErr != nil {
+			return lastErr
 		}
-		cmd2 := exec.Command("ffmpeg", args2...)
-		cmd2.Stderr = &stderr
-		if err2 := cmd2.Run(); err2 != nil {
-			return err2
-		}
+		return err
 	}
 	return nil
 }

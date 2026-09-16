@@ -120,7 +120,8 @@
             url: `/api/file/${encodeURIComponent(currentID)}`,
             fetchOptions: {
                 credentials: 'include'
-            }
+            },
+            mediaElement: document.createElement('audio')
         });
 
         wavesurfer.on('ready', () => {

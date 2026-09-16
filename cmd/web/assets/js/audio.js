@@ -92,7 +92,7 @@
         }
     }
 
-    function initWavesurfer() {
+    async function initWavesurfer() {
         if (wavesurfer) {
             wavesurfer.destroy();
         }
@@ -110,12 +110,25 @@
             barGap: 3,
             barRadius: 3,
             height: 80,
-            normalize: true,
-            url: `/api/file/${encodeURIComponent(currentID)}`
+            normalize: true
         });
 
         isReady = false;
-        if (waveformLoading) waveformLoading.style.opacity = '1';
+        if (waveformLoading) {
+            waveformLoading.style.opacity = '1';
+            waveformLoading.textContent = 'Loading waveform...';
+        }
+
+        try {
+            const res = await fetch(`/api/file/${encodeURIComponent(currentID)}`, { credentials: 'include' });
+            if (!res.ok) throw new Error('Failed to load audio file');
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            wavesurfer.load(blobUrl);
+        } catch (err) {
+            console.error('Failed to fetch audio file:', err);
+            if (waveformLoading) waveformLoading.textContent = 'Failed to load audio waveform';
+        }
 
         wavesurfer.on('ready', () => {
             isReady = true;

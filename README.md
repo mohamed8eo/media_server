@@ -11,8 +11,10 @@ Self-hosted media vault. Browse, stream, and organize your media collection with
 - **Trash & recycle bin** — soft delete with purge retention
 - **Storage quotas** and usage statistics per user
 - **JWT authentication** — access tokens (15 min) + refresh tokens (7 days)
+- **Custom document & PDF reader** with mobile-optimized touch scrolling and scaling (`/reader/{id}`)
 - **HTMX-powered UI** — partial updates without full page reloads
 - **Responsive design** — TailwindCSS + AlpineJS
+- **Local HTTPS / SSL support** via TLS certificate files (`TLS_CERT_FILE`, `TLS_KEY_FILE`)
 
 ## Quick Start
 
@@ -82,6 +84,8 @@ BLUEPRINT_DB_URL=file:./db/mediavault.db?_journal_mode=WAL&_synchronous=NORMAL&_
 | `JWT_SECRET` | yes | — | Access/refresh token signing key. **Keep it stable across rebuilds.** |
 | `DATA_DIR` | no | `/var/lib/.ms-data` | Host path bound into the container for the DB and storage |
 | `BLUEPRINT_DB_URL` | yes | — | SQLite DSN (`file:` prefix, relative to the working dir) |
+| `TLS_CERT_FILE` | no | — | Path to TLS certificate PEM file for HTTPS |
+| `TLS_KEY_FILE` | no | — | Path to TLS private key PEM file for HTTPS |
 
 The database and uploaded files live on disk at `$DATA_DIR` and are **not** wiped by `docker compose up --build` — only `remove --purge-data` deletes them.
 

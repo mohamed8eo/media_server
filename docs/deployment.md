@@ -29,6 +29,19 @@ storage volume mounted.
 | `APP_ENV` | `local` | Environment name |
 | `BLUEPRINT_DB_URL` | SQLite file:./db/mediavault.db... | Database connection string |
 | `STORAGE_PATH` | `./storage` | Base path for user uploads |
+| `TLS_CERT_FILE` | `/app/localhost-cert.pem` | Path to TLS certificate PEM file for HTTPS |
+| `TLS_KEY_FILE` | `/app/localhost-key.pem` | Path to TLS private key PEM file for HTTPS |
+
+**HTTPS Support in Docker:**
+To run the Docker container directly on HTTPS, mount your local certificate and key files into the container via `docker-compose.yml`:
+```yaml
+environment:
+  TLS_CERT_FILE: /app/localhost-cert.pem
+  TLS_KEY_FILE: /app/localhost-key.pem
+volumes:
+  - ./localhost-cert.pem:/app/localhost-cert.pem:ro
+  - ./localhost-key.pem:/app/localhost-key.pem:ro
+```
 
 To use an external SSD:
 

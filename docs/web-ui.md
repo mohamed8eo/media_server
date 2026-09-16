@@ -15,6 +15,7 @@ base.templ          # Root layout with HTMX attributes
 ├── upload.templ    # File upload page
 ├── settings.templ  # Configuration page
 ├── watch.templ     # Job monitoring page
+├── reader.templ    # Document & PDF reader view
 └── shared/
     ├── file_card.templ   # Individual file display component
     └── folder_card.templ # Folder display component
@@ -34,6 +35,7 @@ base.templ          # Root layout with HTMX attributes
 | `recent_section_templ.go` + `recent_section.templ` | Section showing recent uploads/playback |
 | `settings_templ.go` + `settings.templ` | User configuration form |
 | `watch_templ.go` + `watch.templ` | Job queue monitoring and control |
+| `reader_templ.go` + `reader.templ` | Dedicated document & PDF reader with progress tracking and mobile-optimized scaling |
 
 ### HTMX integration
 
@@ -85,12 +87,13 @@ Custom styles are minimal — most styling comes from Tailwind utility classes.
 3. **Upload** (`/upload`) — File upload with folder selection and yt-dlp URL paste
 4. **Settings** (`/settings`) — JWT, storage path, environment config
 5. **Job watch** (`/watch`) — Background job status and controls
+6. **Document Reader** (`/reader/{id}`) — Custom PDF reader with continuous scroll, rotation, page navigation, and playback progress syncing
 
 ### Responsive behavior
 
 - Desktop: Full sidebar + grid layout
 - Tablet: Collapsible sidebar, adjusted grid columns
-- Mobile: Bottom sheet sidebar, single-column grid
+- Mobile: Bottom sheet sidebar, single-column grid, and optimized narrow-padding view for PDF reader to maximize screen utilization without manual zooming.
 
 ### Customization
 

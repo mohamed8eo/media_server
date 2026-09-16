@@ -104,10 +104,16 @@
         isReady = false;
         if (waveformLoading) {
             waveformLoading.style.opacity = '1';
-            waveformLoading.textContent = 'Loading waveform...';
         }
 
-        wavesurfer = WaveSurfer.create({
+        const cachedPeaksKey = `audio_peaks_${currentID}`;
+        let cachedPeaks = null;
+        try {
+            const raw = localStorage.getItem(cachedPeaksKey);
+            if (raw) cachedPeaks = JSON.parse(raw);
+        } catch (e) {}
+
+        const config = {
             container: '#waveform',
             waveColor: waveColor,
             progressColor: progressColor,
@@ -122,7 +128,13 @@
                 credentials: 'include'
             },
             mediaElement: document.createElement('audio')
-        });
+        };
+
+        if (cachedPeaks && Array.isArray(cachedPeaks) && cachedPeaks.length > 0) {
+            config.peaks = cachedPeaks;
+        }
+
+        wavesurfer = WaveSurfer.create(config);
 
         wavesurfer.on('ready', () => {
             isReady = true;
@@ -132,6 +144,17 @@
             const active = currentAudio();
             if (active && active.playback_progress && active.playback_progress > 0) {
                 wavesurfer.setTime(active.playback_progress);
+            }
+
+            if (!cachedPeaks && typeof wavesurfer.exportPeaks === 'function') {
+                try {
+                    const peaks = wavesurfer.exportPeaks();
+                    if (peaks && peaks.length > 0) {
+                        localStorage.setItem(cachedPeaksKey, JSON.stringify(peaks));
+                    }
+                } catch (e) {
+                    console.error('Failed to cache peaks:', e);
+                }
             }
         });
 

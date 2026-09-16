@@ -238,7 +238,6 @@
             initWavesurfer();
         }
     }
-    }
 
     // UI Controls listeners
     if (btnPlay) {

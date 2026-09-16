@@ -101,6 +101,12 @@
         const waveColor = isDark ? '#475569' : '#cbd5e1';
         const progressColor = isDark ? '#6366f1' : '#4f46e5';
 
+        isReady = false;
+        if (waveformLoading) {
+            waveformLoading.style.opacity = '1';
+            waveformLoading.textContent = 'Loading waveform...';
+        }
+
         wavesurfer = WaveSurfer.create({
             container: '#waveform',
             waveColor: waveColor,
@@ -110,25 +116,12 @@
             barGap: 3,
             barRadius: 3,
             height: 80,
-            normalize: true
+            normalize: true,
+            url: `/api/file/${encodeURIComponent(currentID)}`,
+            fetchOptions: {
+                credentials: 'include'
+            }
         });
-
-        isReady = false;
-        if (waveformLoading) {
-            waveformLoading.style.opacity = '1';
-            waveformLoading.textContent = 'Loading waveform...';
-        }
-
-        try {
-            const res = await fetch(`/api/file/${encodeURIComponent(currentID)}`, { credentials: 'include' });
-            if (!res.ok) throw new Error('Failed to load audio file');
-            const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            wavesurfer.load(blobUrl);
-        } catch (err) {
-            console.error('Failed to fetch audio file:', err);
-            if (waveformLoading) waveformLoading.textContent = 'Failed to load audio waveform';
-        }
 
         wavesurfer.on('ready', () => {
             isReady = true;
@@ -139,6 +132,11 @@
             if (active && active.playback_progress && active.playback_progress > 0) {
                 wavesurfer.setTime(active.playback_progress);
             }
+        });
+
+        wavesurfer.on('error', (err) => {
+            console.error('Wavesurfer error:', err);
+            if (waveformLoading) waveformLoading.textContent = 'Failed to load audio waveform';
         });
 
         wavesurfer.on('audioprocess', (time) => {
@@ -223,13 +221,23 @@
             const response = await fetch('/api/file/', { credentials: 'include' });
             if (!response.ok) throw new Error('Unable to load audio files');
             const data = await response.json();
-            audios = (data.files || []).filter(file => String(file.mime_type || '').toLowerCase().startsWith('audio/'));
+            audios = (data.files || []).filter(file => {
+                const mime = String(file.mime_type || '').toLowerCase();
+                return mime.startsWith('audio/') || mime.startsWith('video/');
+            });
+            if (!currentAudio()) {
+                const currentFile = (data.files || []).find(f => String(f.id).toLowerCase() === String(currentID).toLowerCase());
+                if (currentFile) audios.push(currentFile);
+            }
             if (!currentAudio()) throw new Error('Audio unavailable');
             renderQueue();
             initWavesurfer();
         } catch (error) {
+            console.error('Failed to load queue:', error);
             queue.innerHTML = '<p class="px-2 py-4 text-sm text-muted-foreground">Unable to load audio files. Try refreshing the page.</p>';
+            initWavesurfer();
         }
+    }
     }
 
     // UI Controls listeners

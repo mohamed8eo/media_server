@@ -105,13 +105,14 @@ templ Settings() {
 				<div class="space-y-3 pt-2">
 					<div class="flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
 						<div>
-							<p class="text-sm font-medium">Dark Mode</p>
-							<p class="text-xs text-muted-foreground">Toggle between light and dark themes</p>
+							<p class="text-sm font-medium">Theme Mode</p>
+							<p class="text-xs text-muted-foreground">Select light, dark, or system preference</p>
 						</div>
-						<button onclick="toggleTheme()" class="inline-flex h-9 items-center justify-center gap-2 self-start whitespace-nowrap rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground min-[400px]:self-auto">
-							<span class="dark:hidden">Enable Dark</span>
-							<span class="hidden dark:inline">Enable Light</span>
-						</button>
+						<div class="inline-flex rounded-md border border-input bg-background p-1 shadow-sm">
+							<button onclick="setTheme('light')" id="theme-btn-light" class="rounded px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground">Light</button>
+							<button onclick="setTheme('dark')" id="theme-btn-dark" class="rounded px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground">Dark</button>
+							<button onclick="setTheme('system')" id="theme-btn-system" class="rounded px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground">System</button>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -133,7 +134,31 @@ templ Settings() {
 			</div>
 		</div>
 		<script>
+			function setTheme(mode) {
+				localStorage.setItem('theme', mode);
+				if (mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+					document.documentElement.classList.add('dark');
+				} else {
+					document.documentElement.classList.remove('dark');
+				}
+				updateThemeUI(mode);
+			}
+			function updateThemeUI(mode) {
+				['light', 'dark', 'system'].forEach(m => {
+					const btn = document.getElementById('theme-btn-' + m);
+					if (btn) {
+						if (m === mode) {
+							btn.classList.add('bg-primary', 'text-primary-foreground');
+						} else {
+							btn.classList.remove('bg-primary', 'text-primary-foreground');
+						}
+					}
+				});
+			}
 			document.addEventListener('DOMContentLoaded', async () => {
+				const currentTheme = localStorage.getItem('theme') || 'system';
+				updateThemeUI(currentTheme);
+
 				try {
 					const meRes = await fetch('/api/me', { credentials: 'include' });
 					if (meRes.ok) {

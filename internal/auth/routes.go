@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/mattn/go-sqlite3"
+	"golang.org/x/time/rate"
 )
 
 type AuthHandler struct {
@@ -40,6 +41,9 @@ func NewRouter(db database.Service) http.Handler {
 	}
 
 	r := chi.NewRouter()
+
+	middleware := utils.NewRateLimit(rate.Every(time.Minute/5), 5)
+	r.Use(middleware.RateLimit)
 
 	r.Post("/register", h.RegisterHandler)
 	r.Post("/login", h.LoginHandler)

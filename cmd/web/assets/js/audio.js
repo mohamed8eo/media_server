@@ -108,10 +108,42 @@
 
         const cachedPeaksKey = `audio_peaks_${currentID}`;
         let cachedPeaks = null;
+        let cachedDuration = null;
         try {
             const raw = localStorage.getItem(cachedPeaksKey);
-            if (raw) cachedPeaks = JSON.parse(raw);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    cachedPeaks = parsed;
+                } else if (parsed && parsed.peaks) {
+                    cachedPeaks = parsed.peaks;
+                    cachedDuration = parsed.duration;
+                }
+            }
         } catch (e) {}
+
+        let peaksToUse = cachedPeaks;
+        let durationToUse = cachedDuration;
+
+        if (!peaksToUse) {
+            try {
+                const peaksRes = await fetch(`/api/file/${encodeURIComponent(currentID)}/peaks`, {
+                    credentials: 'include'
+                });
+                if (peaksRes.ok) {
+                    const peakData = await peaksRes.json();
+                    if (peakData && peakData.peaks) {
+                        peaksToUse = peakData.peaks;
+                        durationToUse = peakData.duration;
+                        try {
+                            localStorage.setItem(cachedPeaksKey, JSON.stringify(peakData));
+                        } catch (e) {}
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to fetch precomputed peaks:', e);
+            }
+        }
 
         const config = {
             container: '#waveform',
@@ -130,8 +162,11 @@
             mediaElement: document.createElement('audio')
         };
 
-        if (cachedPeaks && Array.isArray(cachedPeaks) && cachedPeaks.length > 0) {
-            config.peaks = cachedPeaks;
+        if (peaksToUse && Array.isArray(peaksToUse) && peaksToUse.length > 0) {
+            config.peaks = peaksToUse;
+        }
+        if (durationToUse) {
+            config.duration = durationToUse;
         }
 
         wavesurfer = WaveSurfer.create(config);
@@ -144,17 +179,6 @@
             const active = currentAudio();
             if (active && active.playback_progress && active.playback_progress > 0) {
                 wavesurfer.setTime(active.playback_progress);
-            }
-
-            if (!cachedPeaks && typeof wavesurfer.exportPeaks === 'function') {
-                try {
-                    const peaks = wavesurfer.exportPeaks();
-                    if (peaks && peaks.length > 0) {
-                        localStorage.setItem(cachedPeaksKey, JSON.stringify(peaks));
-                    }
-                } catch (e) {
-                    console.error('Failed to cache peaks:', e);
-                }
             }
         });
 
@@ -193,6 +217,18 @@
         });
     }
 
+    function updateAudioIcon(audio) {
+        const container = document.getElementById('audio-icon-container');
+        if (!container || !audio) return;
+        const isVideo = String(audio.mime_type || '').toLowerCase().startsWith('video/');
+        if (isVideo) {
+            container.innerHTML = `<img src="/api/file/${encodeURIComponent(audio.id)}/thumb" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.parentElement.innerHTML='<svg class=\\'h-7 w-7\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.8\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' d=\\'M9 9l10.5-3m-10.5 3v9m0-9L4.5 10.5M19.5 6v12a3 3 0 11-3-3m3 3H9\\'/></svg>';" />
+            <div class="absolute inset-0 bg-black/20 grid place-items-center text-white"><svg class="h-5 w-5 drop-shadow" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>`;
+        } else {
+            container.innerHTML = `<svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9l10.5-3m-10.5 3v9m0-9L4.5 10.5M19.5 6v12a3 3 0 11-3-3m3 3H9"/></svg>`;
+        }
+    }
+
     function queueAudios() {
         const active = currentAudio();
         if (!active) return [];
@@ -204,11 +240,20 @@
         queue.innerHTML = items.map(audio => {
             const active = audio.id === currentID;
             const gradient = gradientForKey(audio.id);
-            return `<button type="button" data-audio-id="${escapeHtml(audio.id)}" aria-current="${active ? 'true' : 'false'}" class="grid w-full grid-cols-[60px_minmax(0,1fr)] gap-3 rounded-lg p-2 text-left transition-colors ${active ? 'bg-accent' : 'hover:bg-muted'}">
-                <span class="relative aspect-square overflow-hidden rounded-lg bg-gradient-to-br ${gradient} grid place-items-center text-white shadow-sm">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9l10.5-3m-10.5 3v9m0-9L4.5 10.5M19.5 6v12a3 3 0 11-3-3m3 3H9"/></svg>
-                </span>
-                <span class="min-w-0 self-center">
+            const isVideo = String(audio.mime_type || '').toLowerCase().startsWith('video/');
+
+            const thumbHtml = isVideo
+                ? `<span class="relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg bg-black grid place-items-center text-white shadow-sm">
+                       <img src="/api/file/${escapeHtml(audio.id)}/thumb" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.remove()" />
+                       <svg class="relative h-4 w-4 drop-shadow" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                   </span>`
+                : `<span class="relative aspect-square w-12 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br ${gradient} grid place-items-center text-white shadow-sm">
+                       <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9l10.5-3m-10.5 3v9m0-9L4.5 10.5M19.5 6v12a3 3 0 11-3-3m3 3H9"/></svg>
+                   </span>`;
+
+            return `<button type="button" data-audio-id="${escapeHtml(audio.id)}" aria-current="${active ? 'true' : 'false'}" class="flex items-center gap-3 w-full rounded-lg p-2 text-left transition-colors ${active ? 'bg-accent' : 'hover:bg-muted'}">
+                ${thumbHtml}
+                <span class="min-w-0 flex-1 self-center">
                     <span class="block truncate text-sm font-semibold">${escapeHtml(displayName(audio.filename))}</span>
                     <span class="mt-0.5 block text-xs text-muted-foreground">${formatSize(audio.size)} &middot; ${escapeHtml(typeBadge(audio.mime_type))}</span>
                 </span>
@@ -234,6 +279,7 @@
         if (badge) badge.textContent = typeBadge(audio.mime_type);
         download.href = `/api/file/${encodeURIComponent(audio.id)}`;
         document.title = `${displayName(audio.filename)} · Trove`;
+        updateAudioIcon(audio);
 
         if (updateHistory) history.pushState({ audioID: id }, '', `/listen/${encodeURIComponent(id)}`);
         renderQueue();
@@ -254,6 +300,7 @@
                 if (currentFile) audios.push(currentFile);
             }
             if (!currentAudio()) throw new Error('Audio unavailable');
+            updateAudioIcon(currentAudio());
             renderQueue();
             initWavesurfer();
         } catch (error) {

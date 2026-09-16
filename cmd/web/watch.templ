@@ -12,6 +12,10 @@ templ Watch(file models.File) {
 					<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
 					<span class="hidden sm:inline">Back to Videos</span>
 				</a>
+				<a href={ templ.URL("/listen/" + file.ID.String()) } class="inline-flex items-center gap-2 rounded-xl bg-secondary px-3.5 py-2 text-sm font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80" title="Play as Audio">
+					<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19V5l12-2v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg>
+					<span class="hidden sm:inline">Listen as Audio</span>
+				</a>
 				<a id="watch-download" href={ templ.URL("/api/file/" + file.ID.String()) } download class="inline-flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90">
 					<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>
 					<span class="hidden sm:inline">Download</span>

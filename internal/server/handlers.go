@@ -64,7 +64,8 @@ func (s *Server) AudioHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	file, err := s.db.GetFileByID(fileID)
-	if err != nil || file.UserID != userID || !strings.HasPrefix(strings.ToLower(file.MimeType), "audio/") {
+	mimeLower := strings.ToLower(file.MimeType)
+	if err != nil || file.UserID != userID || (!strings.HasPrefix(mimeLower, "audio/") && !strings.HasPrefix(mimeLower, "video/")) {
 		w.WriteHeader(http.StatusNotFound)
 		templ.Handler(web.AudioUnavailable()).ServeHTTP(w, r)
 		return

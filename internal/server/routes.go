@@ -46,6 +46,7 @@ func (s *Server) RegisterUIRoutes(r chi.Router) {
 		gr.Use(middleware.GuestMiddleware(s.db))
 		gr.Get("/sign-in", templ.Handler(web.SignIn()).ServeHTTP)
 		gr.Get("/sign-up", templ.Handler(web.SignUp()).ServeHTTP)
+		gr.Get("/forgot-password", templ.Handler(web.ResetPassword()).ServeHTTP)
 	})
 
 	// Protected UI pages (Redirects unauthenticated users to /sign-in)

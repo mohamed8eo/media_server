@@ -25,6 +25,9 @@ tmp/
 # .env file
 .env
 
+# Local HTTPS certs (mkcert)
+*.pem
+
 # local sqlite db
 db/
 

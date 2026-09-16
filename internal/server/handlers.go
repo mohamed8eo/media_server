@@ -48,6 +48,45 @@ func (s *Server) WatchHandler(w http.ResponseWriter, r *http.Request) {
 	templ.Handler(web.Watch(*file)).ServeHTTP(w, r)
 }
 
+// ReaderHandler renders a dedicated reader interface for a document owned by the current user.
+func (s *Server) ReaderHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		templ.Handler(web.ReaderUnavailable()).ServeHTTP(w, r)
+		return
+	}
+
+	fileID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		templ.Handler(web.ReaderUnavailable()).ServeHTTP(w, r)
+		return
+	}
+
+	file, err := s.db.GetFileByID(fileID)
+	if err != nil || file.UserID != userID {
+		w.WriteHeader(http.StatusNotFound)
+		templ.Handler(web.ReaderUnavailable()).ServeHTTP(w, r)
+		return
+	}
+
+	mimeLower := strings.ToLower(file.MimeType)
+	isDoc := strings.Contains(mimeLower, "pdf") ||
+		strings.Contains(mimeLower, "epub") ||
+		strings.Contains(mimeLower, "document") ||
+		strings.Contains(mimeLower, "word") ||
+		strings.Contains(mimeLower, "sheet") ||
+		strings.HasPrefix(mimeLower, "text/")
+
+	if !isDoc {
+		w.WriteHeader(http.StatusNotFound)
+		templ.Handler(web.ReaderUnavailable()).ServeHTTP(w, r)
+		return
+	}
+
+	templ.Handler(web.Reader(*file)).ServeHTTP(w, r)
+}
+
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	jsonResp, _ := json.Marshal(s.db.Health())
 	_, _ = w.Write(jsonResp)

@@ -12,7 +12,7 @@ import (
 
 	"mediaserver/internal/database"
 	"mediaserver/internal/files"
-	"mediaserver/internal/server"
+	srv "mediaserver/internal/server"
 )
 
 func gracefulShutdown(apiServer *http.Server, done chan bool) {
@@ -45,7 +45,7 @@ func main() {
 	slog.SetDefault(logger)
 
 	db := database.New()
-	server := server.NewServer(db)
+	server := srv.NewServer(db)
 
 	// Create a done channel to signal when the shutdown is complete
 	done := make(chan bool, 1)
@@ -55,8 +55,14 @@ func main() {
 
 	go files.ResumePendingJobs(db, os.Getenv("STORAGE_PATH"))
 
-	slog.Info("Starting HTTP server", "addr", server.Addr)
-	err := server.ListenAndServe()
+	var err error
+	if certFile, keyFile, ok := srv.TLSFiles(); ok {
+		slog.Info("Starting HTTPS server", "addr", server.Addr, "cert", certFile)
+		err = server.ListenAndServeTLS(certFile, keyFile)
+	} else {
+		slog.Info("Starting HTTP server", "addr", server.Addr)
+		err = server.ListenAndServe()
+	}
 	if err != nil && err != http.ErrServerClosed {
 		panic(fmt.Sprintf("http server error: %s", err))
 	}

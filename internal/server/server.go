@@ -52,3 +52,12 @@ func NewServer(dbArgs ...database.Service) *http.Server {
 
 	return server
 }
+
+// TLSFiles returns the cert/key paths configured for local HTTPS via
+// TLS_CERT_FILE / TLS_KEY_FILE env vars. ok is false when either is unset,
+// meaning the caller should fall back to plain HTTP.
+func TLSFiles() (certFile, keyFile string, ok bool) {
+	certFile = os.Getenv("TLS_CERT_FILE")
+	keyFile = os.Getenv("TLS_KEY_FILE")
+	return certFile, keyFile, certFile != "" && keyFile != ""
+}

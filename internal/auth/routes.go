@@ -54,13 +54,21 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 
 	if err := decodeRequest(r, &req); err != nil {
+		slog.Error("auth.register.decode_failed", "error", err)
 		h.errorResponse(w, r, http.StatusBadRequest, "Bad Request")
 		return
 	}
 
 	// Validate request.
 	if err := h.validator.Struct(req); err != nil {
-		h.errorResponse(w, r, http.StatusBadRequest, "Invalid email or password")
+		slog.Error("auth.register.validation_failed", "error", err, "email", req.Email)
+		errMsg := "Invalid email or password"
+		if strings.Contains(err.Error(), "strongpassword") {
+			errMsg = "Password must be at least 8 characters and include uppercase, lowercase, number, and special character."
+		} else if strings.Contains(err.Error(), "Email") {
+			errMsg = "Please enter a valid email address."
+		}
+		h.errorResponse(w, r, http.StatusBadRequest, errMsg)
 		return
 	}
 
@@ -157,12 +165,14 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var req LogInRequest
 
 	if err := decodeRequest(r, &req); err != nil {
+		slog.Error("auth.login.decode_failed", "error", err)
 		h.errorResponse(w, r, http.StatusBadRequest, "Bad Request")
 		return
 	}
 
 	// Validate request.
 	if err := h.validator.Struct(req); err != nil {
+		slog.Error("auth.login.validation_failed", "error", err, "email", req.Email)
 		h.errorResponse(w, r, http.StatusBadRequest, "Invalid email or password")
 		return
 	}

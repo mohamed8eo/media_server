@@ -109,8 +109,13 @@ templ Reader(file models.File) {
 					display: flex;
 					align-items: flex-start;
 					justify-content: center;
-					padding: 24px;
+					padding: 8px;
 					-webkit-overflow-scrolling: touch;
+				}
+				@media (min-width: 640px) {
+					#reader-scroll {
+						padding: 24px;
+					}
 				}
 				#reader-pageview {
 					position: relative;

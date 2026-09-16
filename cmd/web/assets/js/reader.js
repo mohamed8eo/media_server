@@ -116,7 +116,7 @@ async function loadPdf() {
     }).promise;
     pdfState.doc = doc;
 
-    const availWidth = () => Math.max(300, scrollEl.clientWidth - 48);
+    const availWidth = () => Math.max(200, scrollEl.clientWidth - (window.innerWidth < 640 ? 16 : 48));
     const outScale = deviceRatio;
 
     pdfState.pages = [];
@@ -283,7 +283,7 @@ function relayoutPdf() {
     pdfState.pages = [];
     let y = 24;
     Promise.all(Array.from({ length: doc.numPages }, (_, i) => doc.getPage(i + 1))).then(async (pageObjs) => {
-        const width = Math.max(300, scrollEl.clientWidth - 48);
+        const width = availWidth();
         for (let i = 0; i < doc.numPages; i++) {
             const rot = (pageObjs[i].rotate + pdfRotation) % 360;
             const viewBase = pageObjs[i].getViewport({ scale: 1, rotation: rot });

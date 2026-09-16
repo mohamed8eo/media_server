@@ -1153,19 +1153,10 @@ function openFile(file) {
     if (cat === 'video') {
         window.location.href = '/watch/' + encodeURIComponent(file.id);
     } else if (cat === 'audio') {
-        // Audio player - navigate to play page or direct link
         window.location.href = '/api/file/' + encodeURIComponent(file.id);
-    } else if (file.mime_type && file.mime_type.toLowerCase().includes('pdf')) {
-        // Mobile and tablet browsers commonly cannot render PDFs nested in an iframe.
-        // Use the browser's native PDF reader (top-level navigation) for mobile/tablet,
-        // and keep the viewer modal for desktop PC.
-        const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Tablet|Mobile/i.test(navigator.userAgent) || window.innerWidth < 1024;
-        if (isMobileOrTablet) {
-            window.location.href = '/api/file/' + encodeURIComponent(file.id) + '/' + encodeURIComponent(file.filename);
-        } else {
-            showFileViewerModal(file, 'document');
-        }
-    } else if (cat === 'image' || cat === 'document') {
+    } else if (cat === 'document') {
+        window.location.href = '/reader/' + encodeURIComponent(file.id);
+    } else if (cat === 'image') {
         showFileViewerModal(file, cat);
     } else {
         window.location.href = '/api/file/' + file.id;

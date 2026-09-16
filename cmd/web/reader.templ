@@ -1,0 +1,273 @@
+package web
+
+import (
+	"strconv"
+
+	"mediaserver/internal/models"
+)
+
+templ Reader(file models.File) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+			<title>{ file.DisplayName() } &middot; Trove</title>
+			<link rel="icon" type="image/png" href="/assets/icons/icon-192.png" />
+			<meta name="theme-color" content="#090d16" />
+			<script>
+				if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+					document.documentElement.classList.add('dark');
+				} else {
+					document.documentElement.classList.remove('dark');
+				}
+			</script>
+			<script src="https://cdn.tailwindcss.com"></script>
+			<script>
+				tailwind.config = {
+					darkMode: 'class',
+					theme: {
+						extend: {
+							colors: {
+								border: 'hsl(var(--border))',
+								input: 'hsl(var(--input))',
+								ring: 'hsl(var(--ring))',
+								background: 'hsl(var(--background))',
+								foreground: 'hsl(var(--foreground))',
+								primary: { DEFAULT: 'hsl(var(--primary))', foreground: 'hsl(var(--primary-foreground))' },
+								secondary: { DEFAULT: 'hsl(var(--secondary))', foreground: 'hsl(var(--secondary-foreground))' },
+								destructive: { DEFAULT: 'hsl(var(--destructive))', foreground: 'hsl(var(--destructive-foreground))' },
+								muted: { DEFAULT: 'hsl(var(--muted))', foreground: 'hsl(var(--muted-foreground))' },
+								accent: { DEFAULT: 'hsl(var(--accent))', foreground: 'hsl(var(--accent-foreground))' },
+								card: { DEFAULT: 'hsl(var(--card))', foreground: 'hsl(var(--card-foreground))' },
+							},
+						},
+					},
+				};
+			</script>
+			<style>
+				:root {
+					--background: 0 0% 100%;
+					--foreground: 224 71.4% 4.1%;
+					--card: 0 0% 100%;
+					--card-foreground: 224 71.4% 4.1%;
+					--primary: 220.9 39.3% 11%;
+					--primary-foreground: 210 20% 98%;
+					--secondary: 220 14.3% 95.9%;
+					--secondary-foreground: 220.9 39.3% 11%;
+					--muted: 220 14.3% 95.9%;
+					--muted-foreground: 220 8.9% 46.1%;
+					--accent: 220 14.3% 95.9%;
+					--accent-foreground: 220.9 39.3% 11%;
+					--destructive: 0 84.2% 60.2%;
+					--destructive-foreground: 210 20% 98%;
+					--border: 220 13% 91%;
+					--input: 220 13% 91%;
+					--ring: 224 71.4% 4.1%;
+				}
+				.dark {
+					--background: 222 47% 6%;
+					--foreground: 210 20% 98%;
+					--card: 222 47% 9%;
+					--card-foreground: 210 20% 98%;
+					--primary: 210 20% 98%;
+					--primary-foreground: 222 47% 6%;
+					--secondary: 217 33% 17%;
+					--secondary-foreground: 210 20% 98%;
+					--muted: 217 33% 17%;
+					--muted-foreground: 215 20.2% 65.1%;
+					--accent: 217 33% 17%;
+					--accent-foreground: 210 20% 98%;
+					--destructive: 0 62.8% 30.6%;
+					--destructive-foreground: 210 20% 98%;
+					--border: 217 19% 22%;
+					--input: 217 19% 22%;
+					--ring: 215 20.2% 65.1%;
+				}
+				#reader-page {
+					position: fixed;
+					inset: 0;
+					display: flex;
+					flex-direction: column;
+					background: hsl(var(--background));
+					color: hsl(var(--foreground));
+				}
+				#reader-viewport {
+					position: relative;
+					flex: 1;
+					min-height: 0;
+					overflow: hidden;
+					display: flex;
+					align-items: flex-start;
+					justify-content: center;
+					background: hsl(var(--muted) / 0.45);
+				}
+				#reader-scroll {
+					position: absolute;
+					inset: 0;
+					overflow: auto;
+					display: flex;
+					align-items: flex-start;
+					justify-content: center;
+					padding: 24px;
+					-webkit-overflow-scrolling: touch;
+				}
+				#reader-pageview {
+					position: relative;
+					flex: none;
+					background: hsl(var(--card));
+					box-shadow: 0 10px 40px -10px rgb(0 0 0 / 0.35);
+					border-radius: 4px;
+					overflow: hidden;
+				}
+				#reader-pageview canvas {
+					display: block;
+					width: 100%;
+					height: auto;
+				}
+				#pdf-pages {
+					width: 100%;
+					padding-bottom: 48px;
+				}
+				.pdf-page {
+					position: relative;
+					margin: 0 auto 28px;
+					background: hsl(var(--card));
+					box-shadow: 0 10px 40px -10px rgb(0 0 0 / 0.35);
+					border-radius: 4px;
+					overflow: hidden;
+				}
+				.pdf-page canvas {
+					display: block;
+					width: 100%;
+					height: auto;
+				}
+				.pdf-page .textLayer {
+					position: absolute;
+					inset: 0;
+					overflow: hidden;
+					opacity: 0.85;
+					line-height: 1.0;
+					-webkit-user-select: text;
+					-moz-user-select: text;
+					-ms-user-select: text;
+					user-select: text;
+					pointer-events: auto;
+				}
+				.pdf-page .textLayer span {
+					color: transparent;
+					position: absolute;
+					white-space: pre;
+					cursor: text;
+					transform-origin: 0% 0%;
+				}
+				.pdf-page .textLayer span::selection {
+					background: rgba(59, 130, 246, 0.4);
+					color: transparent;
+				}
+				.pdf-page-num {
+					position: absolute;
+					right: 10px;
+					bottom: 8px;
+					font-size: 11px;
+					line-height: 1;
+					color: hsl(var(--muted-foreground));
+					opacity: 0.55;
+					pointer-events: none;
+				}
+				#reader-book {
+					position: absolute;
+					inset: 0;
+					background: hsl(var(--card));
+				}
+				#reader-book iframe {
+					width: 100%;
+					height: 100%;
+					border: 0;
+				}
+				#reader-tap-left, #reader-tap-right {
+					position: absolute;
+					top: 0;
+					bottom: 0;
+					width: 30%;
+					z-index: 10;
+					cursor: pointer;
+				}
+				#reader-tap-left { left: 0; }
+				#reader-tap-right { right: 0; }
+				#reader-tap-left.epub, #reader-tap-right.epub { display: none; }
+			</style>
+		</head>
+		<body class="m-0 h-full overflow-hidden bg-background font-sans antialiased text-slate-900 dark:text-slate-100">
+			<div id="reader-page" data-file-id={ file.ID.String() } data-file-mime={ file.MimeType } data-file-progress={ strconv.Itoa(file.PlaybackProgress) } data-file-folder={ file.Folder }>
+				<header class="flex h-14 flex-none items-center gap-2 border-b border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-slate-900/85 px-2 backdrop-blur-md sm:px-4">
+					<a href={ templ.URL("/?type=document&folder=" + file.Folder) } class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-medium transition-colors bg-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" title="Back to library">
+						<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+					</a>
+					<div class="min-w-0 flex-1">
+						<h1 class="truncate text-sm font-semibold sm:text-base">{ file.DisplayName() }</h1>
+						<p id="reader-position" class="text-xs text-muted-foreground">&nbsp;</p>
+					</div>
+					<button id="reader-rotate" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors bg-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" title="Rotate Page">
+						<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v1a8 8 0 0 0 16 0v-1m-4-4-4-4-4 4m4-4v12"/></svg>
+					</button>
+					<a href={ templ.URL("/api/file/" + file.ID.String()) } download class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors bg-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer" title="Download">
+						<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>
+					</a>
+				</header>
+
+				<div id="reader-viewport">
+					<div id="reader-scroll">
+						<div id="reader-pageview">
+							<canvas hidden></canvas>
+							<div id="reader-loading" class="grid h-full min-h-[40vh] min-w-[60vw] place-items-center text-sm text-muted-foreground">Loading&hellip;</div>
+						</div>
+					</div>
+					<div id="reader-book" hidden></div>
+					<div id="reader-tap-left" hidden></div>
+					<div id="reader-tap-right" hidden></div>
+				</div>
+
+				<footer class="flex h-14 flex-none items-center gap-3 border-t border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-slate-900/85 px-2 backdrop-blur-md sm:px-4">
+					<button id="reader-prev" class="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+						<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+						<span class="hidden sm:inline">Prev</span>
+					</button>
+					<div class="relative h-3.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+						<div id="reader-progress" class="h-full rounded-full bg-indigo-500 transition-all duration-300" style="width: 0%"></div>
+					</div>
+					<button id="reader-next" class="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+						<span class="hidden sm:inline">Next</span>
+						<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+					</button>
+				</footer>
+			</div>
+
+			<script src="/assets/vendor/epub/jszip.min.js"></script>
+			<script src="/assets/vendor/epub/epub.js"></script>
+			<script type="module" src={ "/assets/js/reader.js?v=" + AssetVersion }></script>
+		</body>
+	</html>
+}
+
+templ ReaderUnavailable() {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1" />
+			<title>Book unavailable &middot; Trove</title>
+			<script src="https://cdn.tailwindcss.com"></script>
+		</head>
+		<body class="h-screen grid place-items-center bg-slate-100 p-6 dark:bg-slate-900">
+			<div class="mx-auto flex max-w-md flex-col items-center rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center dark:border-slate-700 dark:bg-slate-800">
+				<div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+					<svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+				</div>
+				<h1 class="mt-4 text-xl font-bold">Book unavailable</h1>
+				<p class="mt-2 text-sm text-slate-500">This book does not exist, is not a supported format, or you do not have access to it.</p>
+				<a href="/?type=document" class="mt-6 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow hover:bg-slate-800">Back to library</a>
+			</div>
+		</body>
+	</html>
+}

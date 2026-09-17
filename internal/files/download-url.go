@@ -3,6 +3,7 @@ package files
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -27,6 +28,11 @@ import (
 )
 
 var GlobalDownloadPool = jobqueue.NewPool(2, 50)
+
+var activeDownloads = struct {
+	sync.Mutex
+	m map[uuid.UUID]*exec.Cmd
+}{m: make(map[uuid.UUID]*exec.Cmd)}
 
 type DownloadURLRequest struct {
 	URL     string `json:"url"`
@@ -78,6 +84,23 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	var titles []string
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	infoCmd := exec.CommandContext(ctx, "yt-dlp", "--flat-playlist", "--print", "title", req.URL)
+	if out, err := infoCmd.Output(); err == nil {
+		scanner := bufio.NewScanner(bytes.NewReader(out))
+		for scanner.Scan() {
+			t := strings.TrimSpace(scanner.Text())
+			if t != "" {
+				titles = append(titles, t)
+			}
+		}
+	}
+	if len(titles) == 0 {
+		titles = []string{req.URL}
+	}
+
 	outputTemplate := filepath.Join(targetDir, "%(title)s.%(ext)s")
 
 	args := []string{
@@ -116,6 +139,16 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 		startTime := time.Now()
 
 		cmd := exec.Command("yt-dlp", args...)
+		activeDownloads.Lock()
+		activeDownloads.m[jobID] = cmd
+		activeDownloads.Unlock()
+
+		defer func() {
+			activeDownloads.Lock()
+			delete(activeDownloads.m, jobID)
+			activeDownloads.Unlock()
+		}()
+
 		stdoutPipe, err := cmd.StdoutPipe()
 		if err != nil {
 			_ = h.db.UpdateJobStatus(jobID, "failed", "failed to create stdout pipe: "+err.Error())
@@ -261,9 +294,10 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 		_ = h.db.UpdateJobStatus(jobID, "completed", "")
 	})
 
-	utils.RespondWithJSON(w, http.StatusAccepted, map[string]string{
+	utils.RespondWithJSON(w, http.StatusAccepted, map[string]any{
 		"message": "Download started successfully",
 		"job_id":  jobID.String(),
+		"titles":  titles,
 	})
 }
 
@@ -293,5 +327,33 @@ func (h *FileHandler) GetJobHandler(w http.ResponseWriter, r *http.Request) {
 		"status":   job.Status,
 		"progress": job.Progress,
 		"error":    job.Error,
+	})
+}
+
+func (h *FileHandler) CancelJobHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		utils.RespondWithError(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+	_ = userID
+
+	jobIDstr := chi.URLParam(r, "id")
+	jobID, err := uuid.Parse(jobIDstr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid job ID")
+		return
+	}
+
+	activeDownloads.Lock()
+	if cmd, exists := activeDownloads.m[jobID]; exists && cmd != nil && cmd.Process != nil {
+		_ = cmd.Process.Kill()
+	}
+	delete(activeDownloads.m, jobID)
+	activeDownloads.Unlock()
+
+	_ = h.db.UpdateJobStatus(jobID, "failed", "Download stopped by user")
+	utils.RespondWithJSON(w, http.StatusOK, map[string]string{
+		"message": "Download stopped successfully",
 	})
 }

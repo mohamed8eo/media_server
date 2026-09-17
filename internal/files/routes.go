@@ -61,6 +61,7 @@ func NewRouter(db database.Service) http.Handler {
 	r.Post("/", h.UploadHandler)
 	r.Post("/download-url", h.DownloadURLHandler)
 	r.Get("/jobs/{id}", h.GetJobHandler)
+	r.Post("/jobs/{id}/cancel", h.CancelJobHandler)
 	r.Get("/", h.ListHandler)
 	r.Post("/mkdir", h.MkdirHandler)
 	r.Patch("/folder/{id}/rename", h.RenameFolderHandler)

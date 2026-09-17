@@ -227,7 +227,7 @@ function initDownloadURL() {
                     const itemId = 'url-item-' + Date.now() + '-' + idx;
                     if (queueList) {
                         queueList.insertAdjacentHTML('beforeend',
-                            '<div id="' + itemId + '" class="space-y-3 rounded-xl border bg-card p-3 text-card-foreground shadow-sm sm:p-4"><div class="flex min-w-0 flex-col gap-2 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between"><div class="flex min-w-0 items-center gap-3"><div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><div class="min-w-0"><h4 class="truncate text-sm font-medium">' + escapeHtml(title) + '</h4><p class="text-xs text-muted-foreground">Quality: ' + escapeHtml(quality) + ' (yt-dlp)</p></div></div><div class="flex items-center gap-2"><span id="' + itemId + '-status" class="text-xs font-medium text-amber-600 dark:text-amber-400">0%</span>' + (data.job_id ? '<button type="button" onclick="cancelDownload(\'' + data.job_id + '\', \'' + itemId + '\')" class="rounded-lg border px-2 py-1 text-xs font-medium hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer">Stop</button>' : '') + '</div></div><div class="h-1.5 w-full overflow-hidden rounded-full bg-primary/20"><div id="' + itemId + '-progress" class="h-full w-0 rounded-full bg-primary transition-all duration-300"></div></div></div>'
+                            '<div id="' + itemId + '" data-url="' + encodeURIComponent(url) + '" data-quality="' + quality + '" data-folder="' + folder + '" class="space-y-3 rounded-xl border bg-card p-3 text-card-foreground shadow-sm sm:p-4"><div class="flex min-w-0 flex-col gap-2 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between"><div class="flex min-w-0 items-center gap-3"><div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><div class="min-w-0"><h4 class="truncate text-sm font-medium">' + escapeHtml(title) + '</h4><p class="text-xs text-muted-foreground">Quality: ' + escapeHtml(quality) + ' (yt-dlp)</p></div></div><div class="flex items-center gap-2"><span id="' + itemId + '-status" class="text-xs font-medium text-amber-600 dark:text-amber-400">0%</span>' + (data.job_id ? '<button type="button" onclick="cancelDownload(\'' + data.job_id + '\', \'' + itemId + '\')" class="rounded-lg border px-2 py-1 text-xs font-medium hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer">Stop</button>' : '') + '</div></div><div class="h-1.5 w-full overflow-hidden rounded-full bg-primary/20"><div id="' + itemId + '-progress" class="h-full w-0 rounded-full bg-primary transition-all duration-300"></div></div></div>'
                         );
                     }
                     statusEls.push(document.getElementById(itemId + '-status'));
@@ -331,13 +331,14 @@ function pollJobStatusMulti(jobId, statusEls, progressEls, statusEl, onFinished)
             } else if (job.status === 'failed') {
                 finished = true;
                 clearInterval(interval);
-                progressEls.forEach(el => {
+                progressEls.forEach((el, idx) => {
                     if (el) el.className = 'h-full rounded-full bg-destructive transition-all duration-300';
                 });
                 const err = job.error || 'Download failed';
                 statusEls.forEach(el => {
                     if (el) {
-                        el.innerHTML = 'Failed <button type="button" onclick="retryDownload()" class="ml-2 rounded border px-1.5 py-0.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">Retry</button>';
+                        const itemId = el.id.replace('-status', '');
+                        el.innerHTML = 'Failed <button type="button" onclick="retryItemDownload(\'' + itemId + '\')" class="ml-2 rounded border px-1.5 py-0.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">Retry</button>';
                         el.className = 'text-xs font-medium text-destructive flex items-center';
                     }
                 });
@@ -402,8 +403,9 @@ function pollJobStatus(jobId, itemStatusEl, itemProgressEl, statusEl, onFinished
                 }
                 const err = job.error || 'Download failed';
                 if (itemStatusEl) {
-                    itemStatusEl.textContent = 'Failed';
-                    itemStatusEl.className = 'text-xs font-medium text-destructive';
+                    const itemId = itemStatusEl.id.replace('-status', '');
+                    itemStatusEl.innerHTML = 'Failed <button type="button" onclick="retryItemDownload(\'' + itemId + '\')" class="ml-2 rounded border px-1.5 py-0.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">Retry</button>';
+                    itemStatusEl.className = 'text-xs font-medium text-destructive flex items-center';
                 }
                 if (statusEl) {
                     statusEl.textContent = err;
@@ -426,7 +428,7 @@ async function cancelDownload(jobId, itemId) {
             const statusEl = document.getElementById(itemId + '-status');
             const progressEl = document.getElementById(itemId + '-progress');
             if (statusEl) {
-                statusEl.innerHTML = 'Stopped <button type="button" onclick="retryDownload()" class="ml-2 rounded border px-1.5 py-0.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">Retry</button>';
+                statusEl.innerHTML = 'Stopped <button type="button" onclick="retryItemDownload(\'' + itemId + '\')" class="ml-2 rounded border px-1.5 py-0.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">Retry</button>';
                 statusEl.className = 'text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center';
             }
             if (progressEl) {
@@ -441,18 +443,64 @@ async function cancelDownload(jobId, itemId) {
     }
 }
 
-async function retryDownload() {
-    if (window.lastDownloadUrl && document.getElementById('download-url-input')) {
-        document.getElementById('download-url-input').value = window.lastDownloadUrl;
+async function retryItemDownload(itemId) {
+    const el = document.getElementById(itemId);
+    if (!el) return;
+    const url = decodeURIComponent(el.getAttribute('data-url') || '');
+    const quality = el.getAttribute('data-quality') || 'best';
+    const folder = el.getAttribute('data-folder') || '/';
+
+    const statusEl = document.getElementById(itemId + '-status');
+    const progressEl = document.getElementById(itemId + '-progress');
+
+    if (statusEl) {
+        statusEl.textContent = 'Resuming...';
+        statusEl.className = 'text-xs font-medium text-amber-600 dark:text-amber-400';
     }
-    if (window.lastDownloadQuality && document.getElementById('download-quality-select')) {
-        document.getElementById('download-quality-select').value = window.lastDownloadQuality;
+    if (progressEl) {
+        progressEl.style.width = '0%';
+        progressEl.className = 'h-full w-0 rounded-full bg-primary transition-all duration-300';
     }
-    if (window.lastDownloadFolder && document.getElementById('upload-folder-select')) {
-        document.getElementById('upload-folder-select').value = window.lastDownloadFolder;
-    }
-    if (document.getElementById('download-url-btn')) {
-        document.getElementById('download-url-btn').click();
+
+    try {
+        const res = await fetch('/api/file/download-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ url, quality, folder })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.job_id) {
+                const headerDiv = statusEl.parentElement;
+                if (headerDiv) {
+                    let stopBtn = headerDiv.querySelector('button');
+                    if (!stopBtn) {
+                        stopBtn = document.createElement('button');
+                        stopBtn.type = 'button';
+                        stopBtn.className = 'rounded-lg border px-2 py-1 text-xs font-medium hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer ml-2';
+                        headerDiv.appendChild(stopBtn);
+                    }
+                    stopBtn.textContent = 'Stop';
+                    stopBtn.onclick = () => cancelDownload(data.job_id, itemId);
+                }
+
+                pollJobStatus(data.job_id, statusEl, progressEl, document.getElementById('download-url-status'), () => {
+                    uploadedCount++;
+                    updateUploadStatus();
+                });
+            }
+        } else {
+            if (statusEl) {
+                statusEl.innerHTML = 'Failed <button type="button" onclick="retryItemDownload(\'' + itemId + '\')" class="ml-2 rounded border px-1.5 py-0.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">Retry</button>';
+                statusEl.className = 'text-xs font-medium text-destructive flex items-center';
+            }
+        }
+    } catch (e) {
+        if (statusEl) {
+            statusEl.innerHTML = 'Failed <button type="button" onclick="retryItemDownload(\'' + itemId + '\')" class="ml-2 rounded border px-1.5 py-0.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">Retry</button>';
+            statusEl.className = 'text-xs font-medium text-destructive flex items-center';
+        }
     }
 }
 

@@ -78,11 +78,9 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	fileID := uuid.New()
 	outputTemplate := filepath.Join(targetDir, "%(title)s.%(ext)s")
 
 	args := []string{
-		"--no-playlist",
 		"--newline",
 		"--no-color",
 		"--progress",
@@ -180,9 +178,8 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		var finalFilePath string
+		var downloadedFiles []string
 		if entries, err := os.ReadDir(targetDir); err == nil {
-			var newestTime time.Time
 			for _, entry := range entries {
 				if entry.IsDir() {
 					continue
@@ -194,73 +191,70 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 					continue
 				}
 				if !existingFiles[name] || info.ModTime().After(startTime.Add(-2*time.Second)) {
-					if info.ModTime().After(newestTime) {
-						newestTime = info.ModTime()
-						finalFilePath = fullPath
-					}
+					downloadedFiles = append(downloadedFiles, fullPath)
 				}
 			}
 		}
 
-		if finalFilePath == "" {
+		if len(downloadedFiles) == 0 {
 			matches, err := filepath.Glob(filepath.Join(targetDir, "*"))
 			if err == nil && len(matches) > 0 {
-				finalFilePath = matches[len(matches)-1]
+				downloadedFiles = append(downloadedFiles, matches[len(matches)-1])
 			}
 		}
 
-		if finalFilePath == "" {
+		if len(downloadedFiles) == 0 {
 			slog.Error("downloaded file not found", "job_id", jobID)
 			_ = h.db.UpdateJobStatus(jobID, "failed", "downloaded file not found")
 			return
-		}
-		filename := filepath.Base(finalFilePath)
-
-		info, err := os.Stat(finalFilePath)
-		if err != nil {
-			slog.Error("failed to stat downloaded file", "error", err)
-			_ = h.db.UpdateJobStatus(jobID, "failed", "failed to read downloaded file info")
-			return
-		}
-
-		ext := strings.TrimPrefix(filepath.Ext(finalFilePath), ".")
-		mimeType := "video/mp4"
-		switch ext {
-		case "mp3":
-			mimeType = "audio/mpeg"
-		case "webm":
-			mimeType = "video/webm"
-		case "mkv":
-			mimeType = "video/x-matroska"
 		}
 
 		dbFolder := "/"
 		if folder != "" {
 			dbFolder = "/" + folder
 		}
-
 		_ = h.ensureFolderHierarchy(userID, dbFolder)
-		var fileHash string
-		if f, err := os.Open(finalFilePath); err == nil {
-			hsh := sha256.New()
-			_, _ = io.Copy(hsh, f)
-			f.Close()
-			fileHash = hex.EncodeToString(hsh.Sum(nil))
-		}
 
-		if err := h.db.CreateFile(
-			fileID,
-			userID,
-			filename,
-			mimeType,
-			info.Size(),
-			dbFolder,
-			finalFilePath,
-			fileHash,
-		); err != nil {
-			slog.Error("failed to create file record", "error", err)
-			_ = h.db.UpdateJobStatus(jobID, "failed", "failed to save file record")
-			return
+		for _, filePath := range downloadedFiles {
+			filename := filepath.Base(filePath)
+			info, err := os.Stat(filePath)
+			if err != nil {
+				slog.Error("failed to stat downloaded file", "error", err, "path", filePath)
+				continue
+			}
+
+			ext := strings.TrimPrefix(filepath.Ext(filePath), ".")
+			mimeType := "video/mp4"
+			switch ext {
+			case "mp3":
+				mimeType = "audio/mpeg"
+			case "webm":
+				mimeType = "video/webm"
+			case "mkv":
+				mimeType = "video/x-matroska"
+			}
+
+			var fileHash string
+			if f, err := os.Open(filePath); err == nil {
+				hsh := sha256.New()
+				_, _ = io.Copy(hsh, f)
+				f.Close()
+				fileHash = hex.EncodeToString(hsh.Sum(nil))
+			}
+
+			itemFileID := uuid.New()
+			if err := h.db.CreateFile(
+				itemFileID,
+				userID,
+				filename,
+				mimeType,
+				info.Size(),
+				dbFolder,
+				filePath,
+				fileHash,
+			); err != nil {
+				slog.Error("failed to create file record", "error", err, "filename", filename)
+			}
 		}
 
 		_ = h.db.UpdateJobProgress(jobID, 100)

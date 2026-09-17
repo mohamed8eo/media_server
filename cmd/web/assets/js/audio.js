@@ -73,6 +73,17 @@
         return !folder || folder === '/' ? '/' : '/' + String(folder).replace(/^\/+|\/+$/g, '');
     }
 
+    function getResponsiveWaveOptions() {
+        const w = window.innerWidth;
+        if (w < 480) {
+            return { height: 56, barWidth: 2, barGap: 2, barRadius: 2 };
+        }
+        if (w < 768) {
+            return { height: 64, barWidth: 2, barGap: 2, barRadius: 2 };
+        }
+        return { height: 80, barWidth: 3, barGap: 3, barRadius: 3 };
+    }
+
     function currentAudio() {
         return audios.find(audio => audio.id === currentID);
     }
@@ -150,11 +161,11 @@
             waveColor: waveColor,
             progressColor: progressColor,
             cursorColor: isDark ? '#818cf8' : '#4338ca',
-            barWidth: 3,
-            barGap: 3,
-            barRadius: 3,
-            height: 80,
+            ...getResponsiveWaveOptions(),
             normalize: true,
+            interact: true,
+            fillParent: true,
+            minPxPerSec: 1,
             url: `/api/file/${encodeURIComponent(currentID)}`,
             fetchOptions: {
                 credentials: 'include'
@@ -397,6 +408,27 @@
                 wavesurfer.setMuted(!muted);
             }
         }
+    });
+
+    let resizeTimer;
+    let lastWaveBreakpoint = null;
+    function waveBreakpoint() {
+        const w = window.innerWidth;
+        return w < 480 ? 'xs' : w < 768 ? 'sm' : 'lg';
+    }
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            // WaveSurfer's own ResizeObserver keeps the waveform width in sync
+            // with its container automatically. We only need to swap bar
+            // size/height when crossing a breakpoint (e.g. phone rotation,
+            // or resizing the browser window).
+            const bp = waveBreakpoint();
+            if (wavesurfer && isReady && bp !== lastWaveBreakpoint) {
+                wavesurfer.setOptions(getResponsiveWaveOptions());
+            }
+            lastWaveBreakpoint = bp;
+        }, 200);
     });
 
     loadQueue();

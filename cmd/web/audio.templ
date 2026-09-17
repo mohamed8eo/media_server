@@ -7,7 +7,7 @@ import (
 templ AudioPlayer(file models.File) {
 	@AppShell("listen", "", "") {
 		<section id="audio-page" data-audio-id={ file.ID.String() } class="space-y-0">
-			<div class="mb-5 flex justify-end gap-2 sm:mb-6">
+			<div class="mb-5 flex flex-wrap items-center justify-between sm:justify-end gap-2 sm:mb-6">
 				<a href={ templ.URL("/?type=audio&folder=" + file.Folder) } class="inline-flex items-center gap-2 rounded-xl bg-secondary px-3.5 py-2 text-sm font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80">
 					<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
 					<span class="hidden sm:inline">Back to Audio</span>
@@ -20,23 +20,23 @@ templ AudioPlayer(file models.File) {
 
 			<div class="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
 				<section class="min-w-0">
-					<div class="rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8 space-y-6">
+					<div class="rounded-2xl border border-border bg-card p-4 sm:p-6 lg:p-8 shadow-2xl space-y-6">
 						<!-- Header & Metadata -->
-						<div class="flex items-start gap-4">
+						<div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 min-w-0">
 							<div id="audio-icon-container" class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500 shadow-inner relative overflow-hidden">
 								<svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9l10.5-3m-10.5 3v9m0-9L4.5 10.5M19.5 6v12a3 3 0 11-3-3m3 3H9"/></svg>
 							</div>
-							<div class="min-w-0 flex-1">
-								<h1 id="audio-title" class="truncate text-xl font-bold sm:text-2xl text-foreground">{ file.DisplayName() }</h1>
+							<div class="min-w-0 flex-1 w-full">
+								<h1 id="audio-title" dir="auto" class="text-lg sm:text-2xl font-bold text-foreground break-words">{ file.DisplayName() }</h1>
 								<p id="audio-meta" class="mt-1 text-sm text-muted-foreground">{ file.SizeFormatted() } &middot; Trove { file.Folder }</p>
 							</div>
 							<span id="audio-badge" class="shrink-0 rounded-lg bg-accent px-2.5 py-1.5 text-xs font-bold text-accent-foreground">{ file.TypeBadge() }</span>
 						</div>
 
 						<!-- Wavesurfer Waveform Container -->
-						<div class="relative w-full rounded-xl bg-muted/40 p-4 border border-border/50">
-							<div id="waveform" class="w-full"></div>
-							<div id="waveform-loading" class="absolute inset-0 grid place-items-center text-sm font-medium text-muted-foreground bg-card/80 backdrop-blur-xs rounded-xl transition-opacity">Loading waveform...</div>
+						<div class="relative w-full max-w-full rounded-xl bg-muted/40 p-2.5 sm:p-4 border border-border/50 overflow-hidden">
+						<div id="waveform" class="w-full max-w-full min-w-0"></div>
+						<div id="waveform-loading" class="absolute inset-0 grid place-items-center text-sm font-medium text-muted-foreground bg-card/80 backdrop-blur-xs rounded-xl transition-opacity">Loading waveform...</div>
 						</div>
 
 						<!-- Time Indicators -->
@@ -46,26 +46,26 @@ templ AudioPlayer(file models.File) {
 						</div>
 
 						<!-- Controls Bar -->
-						<div class="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-border">
-							<div class="flex items-center gap-2">
-								<button id="btn-backward" title="Rewind 10s" class="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors cursor-pointer">
+						<div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
+							<div class="flex items-center justify-center gap-2 w-full sm:w-auto">
+								<button id="btn-backward" title="Rewind 10s" class="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors cursor-pointer shrink-0">
 									<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
 								</button>
-								<button id="btn-play" title="Play / Pause" class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all cursor-pointer">
+								<button id="btn-play" title="Play / Pause" class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all cursor-pointer shrink-0">
 									<svg id="icon-play" class="h-6 w-6 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
 									<svg id="icon-pause" class="h-6 w-6 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
 								</button>
-								<button id="btn-forward" title="Forward 10s" class="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors cursor-pointer">
+								<button id="btn-forward" title="Forward 10s" class="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors cursor-pointer shrink-0">
 									<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
 								</button>
 							</div>
 
-							<div class="flex items-center gap-3">
-								<button id="btn-mute" title="Mute / Unmute" class="text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+							<div class="flex items-center justify-center gap-3 w-full sm:w-auto">
+								<button id="btn-mute" title="Mute / Unmute" class="text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0">
 									<svg id="icon-volume" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
 									<svg id="icon-muted" class="h-5 w-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
 								</button>
-								<input id="volume-slider" type="range" min="0" max="1" step="0.05" value="1" class="w-24 accent-primary cursor-pointer"/>
+								<input id="volume-slider" type="range" min="0" max="1" step="0.05" value="1" class="w-36 sm:w-24 accent-primary cursor-pointer"/>
 							</div>
 						</div>
 					</div>
@@ -73,10 +73,26 @@ templ AudioPlayer(file models.File) {
 
 				<aside>
 					<h2 class="mb-3 font-bold">More in this folder</h2>
-					<div id="audio-queue" class="max-h-[620px] space-y-1 overflow-y-auto rounded-xl border border-border bg-card p-2 shadow-sm"></div>
+					<div id="audio-queue" class="max-h-[350px] sm:max-h-[480px] xl:max-h-[620px] space-y-1 overflow-y-auto rounded-xl border border-border bg-card p-2 shadow-sm"></div>
 				</aside>
 			</div>
 		</section>
+		<style>
+			#waveform,
+			#waveform > div,
+			#waveform ::part(wrapper) {
+				max-width: 100% !important;
+				overflow: hidden !important;
+			}
+			#waveform canvas {
+				max-width: 100% !important;
+			}
+			@media (max-width: 480px) {
+				#waveform {
+					min-height: 56px;
+				}
+			}
+		</style>
 		<script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
 		<script src={ "/assets/js/audio.js?v=" + AssetVersion }></script>
 	}

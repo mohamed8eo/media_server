@@ -104,6 +104,7 @@ func (h *FileHandler) DownloadURLHandler(w http.ResponseWriter, r *http.Request)
 	outputTemplate := filepath.Join(targetDir, "%(title)s.%(ext)s")
 
 	args := []string{
+		"--continue",
 		"--newline",
 		"--no-color",
 		"--progress",

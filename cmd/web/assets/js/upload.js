@@ -192,6 +192,10 @@ function initDownloadURL() {
         const quality = qualitySelect ? qualitySelect.value : 'best';
         const folder = folderSelect ? folderSelect.value : '/';
 
+        window.lastDownloadUrl = url;
+        window.lastDownloadQuality = quality;
+        window.lastDownloadFolder = folder;
+
         btn.disabled = true;
         if (statusEl) {
             statusEl.textContent = 'Fetching playlist info & starting download...';
@@ -333,8 +337,8 @@ function pollJobStatusMulti(jobId, statusEls, progressEls, statusEl, onFinished)
                 const err = job.error || 'Download failed';
                 statusEls.forEach(el => {
                     if (el) {
-                        el.textContent = 'Failed';
-                        el.className = 'text-xs font-medium text-destructive';
+                        el.innerHTML = 'Failed <button type="button" onclick="retryDownload()" class="ml-2 rounded border px-1.5 py-0.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">Retry</button>';
+                        el.className = 'text-xs font-medium text-destructive flex items-center';
                     }
                 });
                 if (statusEl) {
@@ -422,8 +426,8 @@ async function cancelDownload(jobId, itemId) {
             const statusEl = document.getElementById(itemId + '-status');
             const progressEl = document.getElementById(itemId + '-progress');
             if (statusEl) {
-                statusEl.textContent = 'Stopped';
-                statusEl.className = 'text-xs font-medium text-amber-600 dark:text-amber-400';
+                statusEl.innerHTML = 'Stopped <button type="button" onclick="retryDownload()" class="ml-2 rounded border px-1.5 py-0.5 text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">Retry</button>';
+                statusEl.className = 'text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center';
             }
             if (progressEl) {
                 progressEl.className = 'h-full rounded-full bg-amber-500 transition-all duration-300';
@@ -434,6 +438,21 @@ async function cancelDownload(jobId, itemId) {
         }
     } catch (e) {
         console.error(e);
+    }
+}
+
+async function retryDownload() {
+    if (window.lastDownloadUrl && document.getElementById('download-url-input')) {
+        document.getElementById('download-url-input').value = window.lastDownloadUrl;
+    }
+    if (window.lastDownloadQuality && document.getElementById('download-quality-select')) {
+        document.getElementById('download-quality-select').value = window.lastDownloadQuality;
+    }
+    if (window.lastDownloadFolder && document.getElementById('upload-folder-select')) {
+        document.getElementById('upload-folder-select').value = window.lastDownloadFolder;
+    }
+    if (document.getElementById('download-url-btn')) {
+        document.getElementById('download-url-btn').click();
     }
 }
 

@@ -7,6 +7,8 @@ Self-hosted media vault. Browse, stream, and organize your media collection with
 - **Upload & download** files and folders with drag-and-drop friendly HX triggers
 - **YouTube & URL downloads** via yt-dlp
 - **Media transcoding** — automatic thumbnail generation with ffmpeg/pdftoppm
+- **Resume playback** — automatically picks up where you left off in a video
+- **Audio-only playback mode** for video files
 - **Folder organization** with hierarchical nesting and rename/move operations
 - **Trash & recycle bin** — soft delete with purge retention
 - **Storage quotas** and usage statistics per user
@@ -15,6 +17,31 @@ Self-hosted media vault. Browse, stream, and organize your media collection with
 - **HTMX-powered UI** — partial updates without full page reloads
 - **Responsive design** — TailwindCSS + AlpineJS
 - **Local HTTPS / SSL support** via TLS certificate files (`TLS_CERT_FILE`, `TLS_KEY_FILE`)
+
+## Screenshots
+
+<details>
+<summary><b>View Application Screenshots (Click to expand)</b></summary>
+
+### Home Page
+![Home Page](public/Home_page.png)
+
+### Media Showing
+![Media Showing](public/media_showing.png)
+
+### Watching
+![Watching](public/watching.png)
+
+### Audio-Only Mode
+![Audio Only](public/audio_only.png)
+
+### Upload Page
+![Upload Page](public/upload_page.png)
+
+### YouTube Video Download
+![YouTube Video](public/youtube_video.png)
+
+</details>
 
 ## Quick Start
 

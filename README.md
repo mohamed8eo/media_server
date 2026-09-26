@@ -18,6 +18,12 @@ Self-hosted media vault. Browse, stream, and organize your media collection with
 - **Responsive design** — TailwindCSS + AlpineJS
 - **Local HTTPS / SSL support** via TLS certificate files (`TLS_CERT_FILE`, `TLS_KEY_FILE`)
 
+## Testing
+
+Covers authentication (password hashing, JWT generation/validation, silent token refresh for both UI and API flows), security (path traversal protection, security headers), file handling (concurrent operations, large file upload edge cases, batch operations), and CLI/deployment tooling (systemd unit generation, config persistence).
+
+Run the full suite with `make test`.
+
 ## Screenshots
 
 <details>
